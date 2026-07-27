@@ -1,162 +1,180 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <base target="_top">
-  <meta charset="utf-8">
-  <title>Al Meezan ERP - Dashboard</title>
-  <style>
-    :root { --primary: #1b5e20; --primary-hover: #2e7d32; --bg: #f4f6f9; --card-bg: #fff; --text: #333; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); margin: 0; padding: 20px; color: var(--text); }
-    .wrapper { max-width: 600px; margin: auto; }
-    
-    /* Dashboard Header & Navigation */
-    .dashboard-header { display: flex; justify-content: space-between; align-items: center; background: var(--primary); color: white; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .dashboard-header h1 { margin: 0; font-size: 18px; }
-    .nav-links a { color: white; text-decoration: none; margin-left: 15px; font-size: 14px; font-weight: 600; opacity: 0.9; }
-    .nav-links a:hover { opacity: 1; text-decoration: underline; }
-
-    /* Main Container Card */
-    .container { background: var(--card-bg); padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-    h2 { color: var(--primary); text-align: center; margin-top: 0; margin-bottom: 20px; font-size: 20px; }
-    
-    .form-group { margin-bottom: 15px; }
-    label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 13px; }
-    input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
-    input:focus { border-color: var(--primary); outline: none; }
-    input:readonly { background-color: #e9ecef; color: #495057; cursor: not-allowed; }
-    
-    button { background-color: var(--primary); color: white; padding: 12px; border: none; border-radius: 4px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: background 0.2s; }
-    button:hover { background-color: var(--primary-hover); }
-    
-    .loading { text-align: center; display: none; color: #666; margin-top: 10px; font-size: 14px; }
-    .info-box { font-size: 13px; margin-top: 5px; font-weight: bold; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Al Meezan ERP - Dashboard</title>
+    <!-- Bootstrap CSS for styling -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .navbar { background-color: #198754; }
+        .card { border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .btn-success { background-color: #198754; border: none; }
+        .btn-success:hover { background-color: #157347; }
+    </style>
 </head>
 <body>
 
-  <div class="wrapper">
-    <!-- Top Dashboard Menu -->
-    <div class="dashboard-header">
-      <h1>📊 Al Meezan Dashboard</h1>
-      <div class="nav-links">
-        <a href="#" onclick="alert('Dashboard Home')">Home</a>
-        <a href="#" onclick="alert('Feature coming soon!')">Reports</a>
-      </div>
-    </div>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-dark mb-4">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">📊 Al Meezan Dashboard</span>
+            <div>
+                <a href="#" class="text-white text-decoration-none me-3">Home</a>
+                <a href="#" class="text-white text-decoration-none">Reports</a>
+            </div>
+        </div>
+    </nav>
 
-    <!-- Receipt Entry Card -->
     <div class="container">
-      <h2>⚡ Fast Receipt Entry</h2>
-      <form id="receiptForm" onsubmit="submitForm(event)">
-        
-        <div class="form-group">
-          <label for="accountNo">Account No (Full Unique Number):</label>
-          <input type="text" id="accountNo" name="accountNo" required placeholder="Type account no..." oninput="fetchCustomerData(this.value)">
-          <div class="info-box" id="searchStatus"></div>
-        </div>
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card p-4 bg-white">
+                    <h4 class="text-center text-success mb-4">⚡ Fast Receipt Entry</h4>
+                    
+                    <form id="receiptForm">
+                        <!-- Account No -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Account No (Full Unique Number):</label>
+                            <input type="text" id="accountNo" class="form-control" placeholder="Type account no..." required>
+                        </div>
 
-        <div class="form-group">
-          <label for="accountTitle">Account Title (Customer Name):</label>
-          <input type="text" id="accountTitle" name="accountTitle" readonly placeholder="Auto-populated...">
-        </div>
+                        <!-- Account Title -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Account Title (Customer Name):</label>
+                            <input type="text" id="accountTitle" class="form-control bg-light" placeholder="Auto-populated..." readonly>
+                        </div>
 
-        <div class="form-group">
-          <label for="salesman">Salesman:</label>
-          <input type="text" id="salesman" name="salesman" readonly placeholder="Auto-populated...">
-        </div>
+                        <!-- Salesman -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Salesman:</label>
+                            <input type="text" id="salesman" class="form-control bg-light" placeholder="Auto-populated..." readonly>
+                        </div>
 
-        <div class="form-group">
-          <label for="receiptNoCustom">Receipt No:</label>
-          <input type="text" id="receiptNoCustom" name="receiptNoCustom" required placeholder="Enter Receipt No">
-        </div>
+                        <!-- Remaining Balance Display -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Current Balance (Rs):</label>
+                            <input type="text" id="currentBalance" class="form-control bg-light text-danger fw-bold" placeholder="0.00" readonly>
+                        </div>
 
-        <div class="form-group">
-          <label for="receiptAmount">Received Amount (Rs):</label>
-          <input type="number" id="receiptAmount" name="receiptAmount" required placeholder="0.00">
-        </div>
+                        <!-- Receipt No -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Receipt No:</label>
+                            <input type="number" id="receiptNoCustom" class="form-control" placeholder="Enter Receipt No" required>
+                        </div>
 
-        <button type="submit" id="submitBtn">Save Receipt</button>
-        <div class="loading" id="loadingMsg">Saving transaction securely...</div>
-      </form>
+                        <!-- Received Amount -->
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Received Amount (Rs):</label>
+                            <input type="number" step="any" id="receiptAmount" class="form-control" placeholder="0.00" required>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-grid">
+                            <button type="submit" id="submitBtn" class="btn btn-success btn-lg">Save Receipt</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <script>
-    let searchTimer;
-    function fetchCustomerData(val) {
-      clearTimeout(searchTimer);
-      val = val.trim();
-      
-      if (val.length < 5) {
-        document.getElementById('searchStatus').innerText = "Type complete account number...";
-        document.getElementById('searchStatus').style.color = "#666";
-        document.getElementById('accountTitle').value = "";
-        document.getElementById('salesman').value = "";
-        return;
-      }
+    <!-- Script to handle dynamic search and saving -->
+    <script>
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyihtI-yK6Z7HwUKS99pHFHg-55iRJ7hS9yQBvnLN9Apgo4S89-vR8Gv17aZtaUdtAq4g/exec";
 
-      document.getElementById('searchStatus').innerText = "Searching sale records...";
-      document.getElementById('searchStatus').style.color = "#666";
-      
-      searchTimer = setTimeout(function() {
-        google.script.run
-          .withSuccessHandler(function(res) {
-            if (res && res.success) {
-              document.getElementById('accountTitle').value = res.accountTitle;
-              document.getElementById('salesman').value = res.salesman;
-              document.getElementById('searchStatus').innerText = "✔ Found: " + res.accountTitle + " (Remaining Bal: " + res.balance + ")";
-              document.getElementById('searchStatus').style.color = "green";
-            } else {
-              document.getElementById('searchStatus').innerText = "⚠ " + (res ? res.error : "Not found");
-              document.getElementById('searchStatus').style.color = "red";
-              document.getElementById('accountTitle').value = "";
-              document.getElementById('salesman').value = "";
-            }
-          })
-          .withFailureHandler(function(err) {
-            document.getElementById('searchStatus').innerText = "⚠ Error: " + err.message;
-            document.getElementById('searchStatus').style.color = "red";
-          })
-          .getCustomerDetailsForReceipt(val);
-      }, 400);
-    }
+        const accountNoInput = document.getElementById('accountNo');
+        const accountTitleInput = document.getElementById('accountTitle');
+        const salesmanInput = document.getElementById('salesman');
+        const balanceInput = document.getElementById('currentBalance');
+        const receiptForm = document.getElementById('receiptForm');
+        const submitBtn = document.getElementById('submitBtn');
 
-    function submitForm(event) {
-      event.preventDefault();
-      var submitBtn = document.getElementById('submitBtn');
-      var loadingMsg = document.getElementById('loadingMsg');
-      
-      submitBtn.disabled = true;
-      loadingMsg.style.display = 'block';
+        // When user types account number, fetch details automatically
+        accountNoInput.addEventListener('blur', function() {
+            let accNo = accountNoInput.value.trim();
+            if (!accNo) return;
 
-      var formData = {
-        accountNo: document.getElementById('accountNo').value,
-        accountTitle: document.getElementById('accountTitle').value,
-        salesman: document.getElementById('salesman').value,
-        receiptNoCustom: document.getElementById('receiptNoCustom').value,
-        receiptAmount: document.getElementById('receiptAmount').value
-      };
+            accountTitleInput.value = "Searching...";
+            salesmanInput.value = "Searching...";
+            balanceInput.value = "Searching...";
 
-      google.script.run
-        .withSuccessHandler(function(response) {
-          submitBtn.disabled = false;
-          loadingMsg.style.display = 'none';
-          
-          if(response && response.success) {
-            alert("Success! Receipt saved.\nBook No Calculated: " + response.bookNo + "\nNew Balance: " + response.newBalance);
-            document.getElementById('receiptForm').reset();
-            document.getElementById('searchStatus').innerText = "";
-          } else {
-            alert("Error: " + (response ? response.error : "Unknown error"));
-          }
-        })
-        .withFailureHandler(function(error) {
-          submitBtn.disabled = false;
-          loadingMsg.style.display = 'none';
-          alert("Error: " + error.message);
-        })
-        .saveReceipt(formData);
-    }
-  </script>
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors", // Google Apps Script handles redirect, we use standard fetch
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: "fetch", accountNo: accNo })
+            })
+            .then(() => {
+                // Since no-cors hides response, we use a workaround or direct GET if needed, 
+                // but let's query via standard GET/JSONP if direct return is required.
+                // Alternatively, let's call via standard fetch using GET method for lookup:
+            });
+
+            // Reliable GET request for fetching data:
+            fetch(`${SCRIPT_URL}?action=fetch&accountNo=${encodeURIComponent(accNo)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    accountTitleInput.value = data.accountTitle || "";
+                    salesmanInput.value = data.salesman || "";
+                    balanceInput.value = data.balance || "0";
+                } else {
+                    alert(data.error || "Account not found!");
+                    accountTitleInput.value = "";
+                    salesmanInput.value = "";
+                    balanceInput.value = "";
+                }
+            })
+            .catch(err => {
+                console.error("Error fetching data:", err);
+                accountTitleInput.value = "";
+                salesmanInput.value = "";
+                balanceInput.value = "";
+            });
+        });
+
+        // Form Submission to Save Receipt
+        receiptForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Saving...";
+
+            const formData = {
+                accountNo: accountNoInput.value.trim(),
+                accountTitle: accountTitleInput.value.trim(),
+                salesman: salesmanInput.value.trim(),
+                receiptNoCustom: document.getElementById('receiptNoCustom').value.trim(),
+                receiptAmount: document.getElementById('receiptAmount').value.trim()
+            };
+
+            fetch(SCRIPT_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ action: "save", formData: formData })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert("Receipt Saved Successfully! New Balance: " + data.newBalance);
+                    receiptForm.reset();
+                    accountTitleInput.value = "";
+                    salesmanInput.value = "";
+                    balanceInput.value = "";
+                } else {
+                    alert("Error: " + data.error);
+                }
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Save Receipt";
+            })
+            .catch(err => {
+                console.error("Error saving:", err);
+                alert("Receipt submitted or saved check sheet.");
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Save Receipt";
+            });
+        });
+    </script>
 </body>
 </html>
