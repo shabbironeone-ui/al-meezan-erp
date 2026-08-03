@@ -1,0 +1,414 @@
+/*************************************************
+ * GET CUSTOMER DETAILS FOR RECEIPT
+ *************************************************/
+function getCustomerDetailsForReceipt(accountNo) {
+  try {
+    accountNo = String(accountNo).trim();
+    if (!accountNo) {
+      return { success: false, error: "Please enter Account Number." };
+    }
+
+    let accountTitle = "";
+    let salesman = "";
+    let totalSale = 0;
+    let installment = 0;
+
+    // 1. Get COA Sheet for Account Title & Salesman (Col B = Index 1, Col C = Index 2, Col D = Index 3)
+    try {
+      const coaSheet = getCOASheetForSales();
+      const coaData = coaSheet.getDataRange().getValues();
+      for (let i = 1; i < coaData.length; i++) {
+        // Col B (Index 1) mein Account No hai
+        if (String(coaData[i][1]).trim() === accountNo) {
+          accountTitle = String(coaData[i][2] || "").trim(); // Col C (Index 2) = Account Title
+          salesman = String(coaData[i][3] || "").trim();     // Col D (Index 3) = Salesman
+          break;
+        }
+      }
+    } catch (e) {
+      // Ignore COA error if sheet helper fails
+    }
+
+    // 2. Get SALE Sheet for Total Sale & Installment
+    const saleSheet = ss.getSheetByName("SALE");
+    const saleData = saleSheet.getDataRange().getValues();
+    
+    let saleFound = false;
+    for (let i = 1; i < saleData.length; i++) {
+      if (String(saleData[i][3]).trim() === accountNo) { // Col D (Index 3) = Account No in SALE sheet
+        
+        // Agar COA mein Salesman blank ho tabhi SALE se lein, warna COA ko tarjeeh dein
+        if (!salesman) {
+          salesman = String(saleData[i][2] || "").trim(); 
+        }
+        
+        installment = Number(saleData[i][13]) || 0; // Col N (Index 13) = Installment Per Month
+        totalSale += Number(saleData[i][15]) || 0;  // Col P (Index 15) = Total Amount
+        saleFound = true;
+      }
+    }
+
+    // Agar na COA mein mile aur na SALE mein
+    if (!saleFound && !accountTitle) {
+      return { success: false, error: "Customer not found in COA or SALE records." };
+    }
+
+    // 3. Get RECEIPTS Sheet to calculate total received amount & balance
+    const receiptSheet = ss.getSheetByName("RECEIPTS");
+    let totalReceived = 0;
+    
+    if (receiptSheet) {
+      const receiptData = receiptSheet.getDataRange().getValues();
+      for (let i = 1; i < receiptData.length; i++) {
+        if (String(receiptData[i][3]).trim() === accountNo) { // Col D (Index 3) = Account No
+          totalReceived += Number(receiptData[i][7]) || 0;    // Col H (Index 7) = Receipt Amount
+        }
+      }
+    }
+
+    let currentBalance = totalSale - totalReceived;
+
+    return {
+      success: true,
+      accountNo: accountNo,
+      accountTitle: accountTitle || "Unknown",
+      salesman: salesman || "",
+      installment: installment,
+      totalSale: totalSale,
+      balance: currentBalance
+    };
+
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+
+/*************************************************
+ * SAVE RECEIPT
+ *************************************************/
+function saveReceipt(obj) {
+  try {
+    const sheet = getReceiptSheet();
+
+    const accountNo = String(obj.accountNo).trim();
+    const receiptNo = String(obj.receiptNoCustom).trim();
+    const amount = Number(obj.receiptAmount);
+    const date = obj.receiptDate;
+
+    if (!accountNo || !receiptNo || !amount) {
+      return { success: false, error: "Missing Required Fields." };
+    }
+
+    const customer = getCustomerDetailsForReceipt(accountNo);
+
+    if (!customer.success) {
+      return customer;
+    }
+
+    const id = sheet.getLastRow();
+
+    sheet.appendRow([
+      id,
+      receiptNo,
+      date,
+      accountNo,
+      "",
+      customer.accountTitle,
+      customer.installment,
+      amount,
+      "",
+      "",
+      accountNo + " - " + customer.accountTitle,
+      "",
+      "",
+      amount,
+      0,
+      0,
+      customer.balance - amount
+    ]);
+
+    return {
+      success: true,
+      bookNo: id,
+      newBalance: customer.balance - amount
+    };
+
+  } catch(err) {
+    return { success: false, error: err.message };
+  }
+}
+
+
+/*************************************************
+ * SEARCH RECEIPT
+ *************************************************/
+function searchReceiptForEdit(receiptNo) {
+  try {
+    if (!receiptNo) {
+      return { success: false, error: "Please enter Receipt No." };
+    }
+
+    receiptNo = String(receiptNo).trim().toUpperCase();
+    const sheet = getReceiptSheet();
+    const data = sheet.getDataRange().getValues();
+
+    let entries = [];
+
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const rct = String(row[1] || "").trim().toUpperCase();
+
+      if (rct === receiptNo) {
+        let rawDate = row[2];
+        let dateStr = "";
+        if (rawDate instanceof Date) {
+          dateStr = Utilities.formatDate(rawDate, Session.getScriptTimeZone(), "yyyy-MM-dd");
+        } else if (rawDate) {
+          dateStr = String(rawDate);
+        }
+
+        entries.push({
+          rowIndex: i + 1,
+          receiptNo: String(row[1] || ""),
+          date: dateStr,
+          accountNo: String(row[3] || ""),
+          accountTitle: String(row[5] || ""),
+          amount: Number(row[7]) || 0
+        });
+      }
+    }
+
+    if (entries.length === 0) {
+      return { success: false, error: "Receipt no is not found." };
+    }
+
+    return { success: true, count: entries.length, entries: entries };
+
+  } catch (err) {
+    return { success: false, error: err.toString() };
+  }
+}
+
+
+/*************************************************
+ * SEARCH ACCOUNT FOR EDIT (Recovery History)
+ *************************************************/
+function searchAccountForEdit(accountNo) {
+  try {
+    if (!accountNo) {
+      return { success: false, error: "Please enter Account No." };
+    }
+
+    accountNo = String(accountNo).trim();
+    var sheet = getReceiptSheet();
+    var data = sheet.getDataRange().getValues();
+    var entries = [];
+
+    for (var i = 1; i < data.length; i++) {
+      var accNo = String(data[i][3] || "").trim();
+
+      if (accNo === accountNo) {
+        var rawDate = data[i][2];
+        var dateStr = "";
+        if (rawDate instanceof Date) {
+          dateStr = Utilities.formatDate(rawDate, Session.getScriptTimeZone(), "yyyy-MM-dd");
+        } else if (rawDate) {
+          dateStr = String(rawDate);
+        }
+
+        entries.push({
+          rowIndex: i + 1,
+          receiptNo: String(data[i][1] || ""),
+          date: dateStr,
+          accountNo: String(data[i][3] || ""),
+          accountTitle: String(data[i][5] || ""),
+          amount: Number(data[i][7]) || 0
+        });
+      }
+    }
+
+    if (entries.length === 0) {
+      return { success: false, error: "Is account number ki koi recovery entry nahi mili." };
+    }
+
+    return { success: true, entries: entries };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+
+/*************************************************
+ * UPDATE RECEIPT ENTRY
+ *************************************************/
+function updateReceiptEntry(item) {
+  try {
+    var sheet = getReceiptSheet();
+    var row = Number(item.rowIndex);
+
+    if (row < 2) {
+      return { success: false, error: "Invalid Row." };
+    }
+
+    if (item.accountNo) {
+      sheet.getRange(row, 4).setValue(String(item.accountNo).trim());
+      
+      var saleData = getSaleSheet().getDataRange().getValues();
+      for (var s = 1; s < saleData.length; s++) {
+        if (String(saleData[s][3]).trim() === String(item.accountNo).trim()) {
+          sheet.getRange(row, 6).setValue(saleData[s][5]);
+          break;
+        }
+      }
+    }
+
+    if (item.amount !== undefined) {
+      sheet.getRange(row, 8).setValue(Number(item.amount) || 0);
+      sheet.getRange(row, 14).setValue(Number(item.amount) || 0);
+    }
+
+    var activeAccNo = String(sheet.getRange(row, 4).getValue()).trim();
+    var saleData = getSaleSheet().getDataRange().getValues();
+    let totalSale = 0;
+    for (var i = 1; i < saleData.length; i++) {
+      if (String(saleData[i][3]).trim() === activeAccNo) {
+        totalSale += Number(saleData[i][15]) || 0;
+      }
+    }
+
+    var receiptData = sheet.getDataRange().getValues();
+    let totalReceived = 0;
+    for (var i = 1; i < receiptData.length; i++) {
+      if (String(receiptData[i][3]).trim() === activeAccNo) {
+        totalReceived += Number(receiptData[i][7]) || 0;
+      }
+    }
+
+    var balance = totalSale - totalReceived;
+    sheet.getRange(row, 17).setValue(balance);
+
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+
+/*************************************************
+ * DELETE RECEIPT ENTRY
+ *************************************************/
+function deleteReceiptEntry(obj) {
+  try {
+    const sheet = getReceiptSheet();
+    const row = Number(obj.rowIndex);
+
+    if (row < 2) {
+      return { success: false, error: "Invalid Row." };
+    }
+
+    sheet.deleteRow(row);
+    return { success: true, message: "Receipt Deleted Successfully." };
+
+  } catch(err) {
+    return { success: false, error: err.message };
+  }
+}
+
+
+/*************************************************
+ * DAILY RECOVERY REPORT
+ *************************************************/
+function getAllReceiptsForReport() {
+  try {
+    const receiptSheet = getReceiptSheet();
+    const lastRow = receiptSheet.getLastRow();
+
+    if (lastRow < 2) {
+      return { success: true, data: [] };
+    }
+
+    const receiptData = receiptSheet
+      .getRange(2, 1, lastRow - 1, receiptSheet.getLastColumn())
+      .getValues();
+
+    const saleData = getSaleSheet().getDataRange().getValues();
+    const saleMap = {};
+
+    for (let i = 1; i < saleData.length; i++) {
+      const acc = String(saleData[i][3]).trim();
+      if (!saleMap[acc]) {
+        saleMap[acc] = {
+          accountTitle: saleData[i][4] || "",
+          salesman: saleData[i][2] || ""
+        };
+      }
+    }
+
+    const result = [];
+
+    receiptData.forEach(function(row) {
+      const acc = String(row[3] || "").trim();
+      const saleInfo = saleMap[acc] || {};
+
+      let d = row[2];
+      let dateObj = null;
+      let dateStr = "";
+
+      if (d instanceof Date) {
+        dateObj = d.getTime();
+        dateStr = Utilities.formatDate(d, Session.getScriptTimeZone(), "dd-MM-yyyy");
+      }
+
+      result.push({
+        id: row[0],
+        receiptNo: row[1] || "",
+        dateObj: dateObj,
+        dateStr: dateStr,
+        accountNo: acc,
+        accountTitle: saleInfo.accountTitle || row[5] || "",
+        salesman: saleInfo.salesman || "",
+        bookNo: row[0] || "",
+        amount: Number(row[7]) || 0,
+        balance: Number(row[16]) || 0
+      });
+    });
+
+    return { success: true, data: result };
+
+  } catch (err) {
+    return { success: false, error: err.toString() };
+  }
+}
+
+
+/*************************************************
+ * GET ALL CUSTOMERS CACHE
+ *************************************************/
+function getAllCustomersCache() {
+  const sale = getSaleSheet().getDataRange().getValues();
+  const receipts = getReceiptSheet().getDataRange().getValues();
+
+  let received = {};
+
+  for (let i = 1; i < receipts.length; i++) {
+    let acc = String(receipts[i][3]).trim();
+    received[acc] = (received[acc] || 0) + (Number(receipts[i][7]) || 0);
+  }
+
+  let customers = {};
+
+  for (let i = 1; i < sale.length; i++) {
+    let acc = String(sale[i][3]).trim();
+    customers[acc] = {
+      accountNo: acc,
+      accountTitle: sale[i][5],
+      salesman: sale[i][2],
+      installment: Number(sale[i][13]) || 0,
+      totalSale: Number(sale[i][15]) || 0,
+      balance: (Number(sale[i][15]) || 0) - (received[acc] || 0)
+    };
+  }
+
+  return customers;
+}

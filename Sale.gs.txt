@@ -1,0 +1,85 @@
+/*************************************************
+ * GET CUSTOMER DETAILS FOR RECEIPT (COA + SALE + RECEIPTS)
+ *************************************************/
+function getCustomerDetailsForReceipt(accountNo) {
+  try {
+    accountNo = String(accountNo).trim();
+    if (!accountNo) {
+      return { success: false, error: "Please enter Account Number." };
+    }
+
+    let accountTitle = "";
+    let salesman = "";
+    let totalSale = 0;
+    let installment = 0;
+
+    // 1. Get COA Sheet for Account Title & Salesman (Col B = AccNo, Col C = Title, Col D = Salesman)
+    try {
+      const coaSheet = getCOASheetForSales();
+      const coaData = coaSheet.getDataRange().getValues();
+      for (let i = 1; i < coaData.length; i++) {
+        if (String(coaData[i][1]).trim() === accountNo) {
+          accountTitle = coaData[i][2] || ""; 
+          salesman = coaData[i][3] || "";     
+          break;
+        }
+      }
+    } catch (e) {
+      // If COA fails, fallback handled below
+    }
+
+    // 2. Get SALE Sheet for Total Sale & Installment (Col D = AccNo, Col N = Installment, Col P = Total Amount)
+    const saleSheet = ss.getSheetByName("SALE"); // ya aapka jo bhi getSaleSheet() function ho
+    const saleData = saleSheet.getDataRange().getValues();
+    
+    let saleFound = false;
+    for (let i = 1; i < saleData.length; i++) {
+      if (String(saleData[i][3]).trim() === accountNo) { // Col D (Index 3) = Account No
+        
+        // Fallback if title/salesman not in COA
+        if (!accountTitle) {
+          accountTitle = saleData[i][4] || ""; // Col E = Account Title in SALE sheet
+        }
+        if (!salesman) {
+          salesman = saleData[i][2] || ""; // Col C = Salesman in SALE sheet
+        }
+        
+        installment = Number(saleData[i][13]) || 0; // Col N (Index 13) = Installment Per Month
+        totalSale += Number(saleData[i][15]) || 0;  // Col P (Index 15) = Total Amount
+        saleFound = true;
+      }
+    }
+
+    if (!saleFound && !accountTitle) {
+      return { success: false, error: "Customer not found in COA or SALE records." };
+    }
+
+    // 3. Get RECEIPTS Sheet to calculate total received amount & balance (Col D = AccNo, Col H = Amount)
+    const receiptSheet = ss.getSheetByName("RECEIPTS");
+    let totalReceived = 0;
+    
+    if (receiptSheet) {
+      const receiptData = receiptSheet.getDataRange().getValues();
+      for (let i = 1; i < receiptData.length; i++) {
+        if (String(receiptData[i][3]).trim() === accountNo) { // Col D (Index 3) = Account No
+          totalReceived += Number(receiptData[i][7]) || 0;    // Col H (Index 7) = Receipt Amount
+        }
+      }
+    }
+
+    let currentBalance = totalSale - totalReceived;
+
+    return {
+      success: true,
+      accountNo: accountNo,
+      accountTitle: accountTitle || "Unknown",
+      salesman: salesman || "",
+      installment: installment,
+      totalSale: totalSale,
+      balance: currentBalance
+    };
+
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}

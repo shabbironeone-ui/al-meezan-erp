@@ -1,0 +1,40 @@
+function formatDateToDDMMYYYY(rawDate) {
+  if (!rawDate) return "";
+  let d = new Date(rawDate);
+  if (!isNaN(d.getTime()) && d.getFullYear() > 2000) {
+    let day = String(d.getDate()).padStart(2, '0');
+    let month = String(d.getMonth() + 1).padStart(2, '0');
+    let year = d.getFullYear();
+    return `${day}-${month}-${year}`;
+  }
+  return String(rawDate);
+}
+function getSS() {
+  return SpreadsheetApp.getActiveSpreadsheet();
+}
+
+function getReceiptSheet() {
+  const sheet = getSS().getSheetByName("RECEIPTS");
+  if (!sheet) throw new Error("RECEIPTS Sheet Not Found.");
+  return sheet;
+}
+
+function getSaleSheet() {
+  const sheet = getSS().getSheetByName("SALE");
+  if (!sheet) throw new Error("SALE Sheet Not Found.");
+  return sheet;
+}
+
+function getCOASheet() {
+  const sheet = getSS().getSheetByName("COA");
+  if (!sheet) throw new Error("COA Sheet Not Found.");
+  return sheet;
+}
+
+function getCOASheetForSales() {
+  return getCOASheet();
+}
+
+function getSalesSheet() {
+  return getSaleSheet();
+}

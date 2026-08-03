@@ -1,0 +1,109 @@
+/*************************************************
+ * AL MEEZAN ERP PROFESSIONAL
+ * PARTYLEDGER.GS
+ * Party Ledger Module
+ *************************************************/
+function getCustomerLedger(accNo) {
+  try {
+    if (!accNo) {
+      return { error: true, message: "Account number is missing." };
+    }
+    
+    accNo = String(accNo).trim();
+    const saleSheet = getSaleSheet();
+    const receiptSheet = getReceiptSheet();
+
+    const saleData = saleSheet.getDataRange().getValues();
+    const receiptData = receiptSheet.getDataRange().getValues();
+
+    // 1. Fetch Mobile & Sub Salesman from COA Sheet if available
+    let coaMobile = "N/A";
+    let coaSubSalesman = "N/A";
+    try {
+      const coaSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("COA");
+      if (coaSheet) {
+        const coaData = coaSheet.getDataRange().getValues();
+        for (let i = 1; i < coaData.length; i++) {
+          let cAcc = coaData[i][1] !== undefined ? String(coaData[i][1]).trim() : "";
+          if (cAcc === accNo) {
+            coaMobile = coaData[i][5] || coaData[i][6] || "N/A";
+            coaSubSalesman = coaData[i][4] || "N/A";
+            break;
+          }
+        }
+      }
+    } catch(e) {}
+
+    let info = null;
+    let salesList = [];
+    let receiptsList = [];
+
+    // 2. Search SALE Sheet
+    for (let i = 1; i < saleData.length; i++) {
+      let row = saleData[i];
+      let rowAcc = row[3] !== undefined ? String(row[3]).trim() : "";
+
+      if (rowAcc === accNo) {
+        if (!info) {
+          info = {
+            accNo: accNo,
+            accTitle: row[4] || "N/A",
+            salesman: row[2] || "N/A",
+            subSalesman: coaSubSalesman !== "N/A" ? coaSubSalesman : "N/A",
+            mobile: coaMobile
+          };
+        }
+        
+        let formattedDate = formatDateToDDMMYYYY(row[1]);
+
+        // Combine Col F, G, H for Product
+        let company = row[5] ? String(row[5]).trim() : "";
+        let category = row[6] ? String(row[6]).trim() : "";
+        let model = row[7] ? String(row[7]).trim() : "";
+        let fullProduct = [company, category, model].filter(Boolean).join(" - ");
+        if (!fullProduct) fullProduct = "N/A";
+
+        let planMonths = row[11] || row[10] || "1";
+
+        salesList.push({
+          date: formattedDate,
+          product: fullProduct,
+          plan: planMonths,                    // Exact Plan Months
+          monthlyInst: row[13] || 0,            // Installment Per Month
+          total: row[15] || 0                   // Total Amount
+        });
+      }
+    }
+
+    if (!info) {
+      return { error: true, message: "Account " + accNo + " not found in Sales records." };
+    }
+
+    // 3. Search RECEIPTS Sheet
+    for (let i = 1; i < receiptData.length; i++) {
+      let row = receiptData[i];
+      let rowAcc = row[3] !== undefined ? String(row[3]).trim() : "";
+
+      if (rowAcc === accNo) {
+        let formattedDate = formatDateToDDMMYYYY(row[2]);
+
+        receiptsList.push({
+          receiptNo: row[1] || "RC-0",
+          date: formattedDate,
+          amount: row[7] || 0,
+          remarks: row[8] || ""
+        });
+      }
+    }
+
+    return {
+      success: true,
+      info: info,
+      sales: salesList,
+      receipts: receiptsList
+    };
+
+  } catch (err) {
+    return { error: true, message: "Server Error: " + err.message };
+  }
+}

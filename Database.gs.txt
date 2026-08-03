@@ -1,0 +1,153 @@
+/*************************************************
+ * AL MEEZAN ELECTRONICS ERP
+ * DATABASE.GS
+ * VERSION 3.0
+ *************************************************/
+
+const DB = SpreadsheetApp.getActiveSpreadsheet();
+
+/*************************************************
+ * BASIC
+ *************************************************/
+
+function db() {
+  return DB;
+}
+
+function dbSheet(sheetName) {
+  const sheet = DB.getSheetByName(sheetName);
+
+  if (!sheet) {
+    throw new Error("Sheet not found : " + sheetName);
+  }
+
+  return sheet;
+}
+
+function dbData(sheetName) {
+  return dbSheet(sheetName).getDataRange().getValues();
+}
+
+function dbHeaders(sheetName) {
+  const data = dbData(sheetName);
+  return data.length ? data[0] : [];
+}
+
+/*************************************************
+ * INSERT
+ *************************************************/
+
+function dbInsert(sheetName, rowData) {
+  dbSheet(sheetName).appendRow(rowData);
+  return true;
+}
+
+/*************************************************
+ * FIND
+ *************************************************/
+
+function dbFind(sheetName, columnNo, value) {
+
+  const data = dbData(sheetName);
+  const search = String(value).trim();
+
+  for (let i = 1; i < data.length; i++) {
+
+    if (String(data[i][columnNo - 1]).trim() === search) {
+      return i + 1;
+    }
+
+  }
+
+  return 0;
+}
+
+function dbExists(sheetName, columnNo, value) {
+  return dbFind(sheetName, columnNo, value) !== 0;
+}
+
+/*************************************************
+ * UPDATE
+ *************************************************/
+
+function dbUpdate(sheetName, rowNo, columnNo, value) {
+
+  dbSheet(sheetName)
+    .getRange(rowNo, columnNo)
+    .setValue(value);
+
+  return true;
+}
+
+/*************************************************
+ * DELETE
+ *************************************************/
+
+function dbDelete(sheetName, rowNo) {
+
+  dbSheet(sheetName).deleteRow(rowNo);
+
+  return true;
+}
+
+/*************************************************
+ * GET COMPLETE ROW
+ *************************************************/
+
+function dbGetRow(sheetName, rowNo) {
+
+  return dbSheet(sheetName)
+    .getRange(rowNo, 1, 1, dbSheet(sheetName).getLastColumn())
+    .getValues()[0];
+
+}
+
+/*************************************************
+ * LAST ROW
+ *************************************************/
+
+function dbLastRow(sheetName) {
+  return dbSheet(sheetName).getLastRow();
+}
+
+/*************************************************
+ * LAST COLUMN
+ *************************************************/
+
+function dbLastColumn(sheetName) {
+  return dbSheet(sheetName).getLastColumn();
+}
+/*************************************************
+ * SHORTCUT HELPERS
+ *************************************************/
+
+function getSaleSheet() {
+  return dbSheet(SHEETS.SALES);
+}
+
+function getReceiptSheet() {
+  return dbSheet(SHEETS.RECEIPTS);
+}
+
+function getCOASheet() {
+  return dbSheet(SHEETS.COA);
+}
+
+/*************************************************
+ * DATE FORMAT
+ *************************************************/
+
+function formatDateToDDMMYYYY(value) {
+
+  if (!value) return "";
+
+  const d = new Date(value);
+
+  if (isNaN(d)) return "";
+
+  return Utilities.formatDate(
+    d,
+    Session.getScriptTimeZone(),
+    "dd-MM-yyyy"
+  );
+}

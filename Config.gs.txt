@@ -1,0 +1,86 @@
+/*************************************************
+ * AL MEEZAN ERP PROFESSIONAL
+ * CONFIG.GS
+ * VERSION 1.0
+ *************************************************/
+
+const APP = {
+  NAME: "Al Meezan ERP",
+  VERSION: "1.0.0",
+  COMPANY: "Al Meezan Electronics",
+  CURRENCY: "Rs",
+  DATE_FORMAT: "dd-MMM-yyyy",
+  TIMEZONE: Session.getScriptTimeZone()
+};
+
+const SHEETS = {
+  COA: "COA",
+  SALES: "SALE",
+  RECEIPTS: "RECEIPTS",
+  LEDGER_AGING: "LEDGER AGING",
+  RECEIPTS_MONTH_WISE: "RECEIPTS MONTH WISE",
+  SALES_SUMMARY: "SALES SUMMARY",
+  DAILY_RECEIPT: "DAILY RECEIPT",
+  RECEIPT_SUMMARY: "RECEIPT SUMMARY",
+  SALES_PARTY_LEDGER: "sales party ledger",
+  RECEIPT_PARTY_LEDGER: "receipt party ledger",
+  PARTY_LEDGER: "party ledger",
+  TEMP: "Sheet1",
+  EXPENSES: "EXPENSES"
+};
+
+const FUTURE = {
+  PRODUCTS: "PRODUCT MASTER",
+  SUPPLIERS: "SUPPLIER MASTER",
+  PURCHASES: "PURCHASE",
+  INVENTORY: "INVENTORY",
+  STOCK_LEDGER: "STOCK LEDGER",
+  CUSTOMERS: "CUSTOMER MASTER",
+  HP_CONTRACTS: "HP CONTRACTS",
+  INSTALLMENTS: "INSTALLMENT SCHEDULE",
+  JOURNAL: "JOURNAL",
+  GENERAL_LEDGER: "GENERAL LEDGER",
+  TRIAL_BALANCE: "TRIAL BALANCE",
+  BALANCE_SHEET: "BALANCE SHEET",
+  PROFIT_LOSS: "PROFIT & LOSS"
+};
+
+const ROLE = {
+  ADMIN: "ADMIN",
+  MANAGER: "MANAGER",
+  SALESMAN: "SALESMAN",
+  CASHIER: "CASHIER",
+  ACCOUNTANT: "ACCOUNTANT",
+  STORE: "STORE"
+};
+
+const SALE_TYPE = {
+  HP: "HP",
+  CASH: "CASH",
+  CREDIT: "CREDIT"
+};
+
+const PAYMENT_MODE = {
+  CASH: "Cash",
+  BANK: "Bank",
+  JAZZCASH: "JazzCash",
+  EASYPAISA: "EasyPaisa",
+  CHEQUE: "Cheque"
+};
+
+const STATUS = {
+  ACTIVE: "Active",
+  INACTIVE: "Inactive",
+  PAID: "Paid",
+  PENDING: "Pending",
+  OVERDUE: "Overdue",
+  CANCELLED: "Cancelled"
+};
+
+const STOCK_TXN = {
+  PURCHASE: "Purchase",
+  SALE: "Sale",
+  RETURN: "Return",
+  ADJUSTMENT: "Adjustment",
+  TRANSFER: "Transfer"
+};

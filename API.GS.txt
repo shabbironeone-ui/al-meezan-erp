@@ -1,0 +1,55 @@
+/*************************************************
+ * AL MEEZAN ERP PROFESSIONAL - API.GS
+ *************************************************/
+
+const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+/*************************************************
+ * DATABASE & SHEET HELPERS
+ *************************************************/
+
+
+
+/*************************************************
+ * UI DIALOG TRIGGERS (FROM API)
+ *************************************************/
+function showReceiptForm() {
+  const html = HtmlService.createHtmlOutputFromFile('ReceiptForm')
+    .setWidth(520)
+    .setHeight(700);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Daily Collection & Receipt Entry');
+}
+
+function showReportsDialog() {
+  SpreadsheetApp.getUi().showModelessDialog(
+    HtmlService.createHtmlOutputFromFile("ReportsView")
+      .setWidth(800)
+      .setHeight(560),
+    "Daily Recovery & Receipts Report"
+  );
+}
+
+function showCustomerForm() {
+  const html = HtmlService.createHtmlOutputFromFile('CustomerForm')
+    .setWidth(500)
+    .setHeight(600);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Register New Customer (COA)');
+}
+
+function showSalesForm() {
+  const html = HtmlService.createHtmlOutputFromFile('SalesForm')
+    .setWidth(600)
+    .setHeight(700);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Open Sales Entry Form');
+}
+/*************************************************
+ * CASH BOOK MODULE ROUTER
+ **************************************************/
+
+function showCashBook() {
+  const html = HtmlService.createHtmlOutputFromFile('CashBook')
+      .setTitle('Al Meezan ERP - Cash & Bank Book')
+      .setWidth(850)   // Yahan width barha di gayi hai
+      .setHeight(650);  // Yahan height barha di gayi hai
+  SpreadsheetApp.getUi().showModalDialog(html, 'Cash & Bank Book Management');
+}

@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f6f9;
+      margin: 0;
+      padding: 10px;
+      color: #333;
+    }
+    h2 {
+      text-align: center;
+      color: #004080;
+      margin: 5px 0 15px 0;
+      font-size: 20px;
+    }
+    .form-container {
+      background: #fff;
+      padding: 20px 25px;
+      border-radius: 8px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+    fieldset {
+      border: 1px solid #dcdcdc;
+      border-radius: 6px;
+      padding: 12px 18px;
+      margin-bottom: 12px;
+      background-color: #fafbfc;
+    }
+    legend {
+      font-weight: bold;
+      color: #004080;
+      background-color: #e6f0fa;
+      padding: 3px 10px;
+      border: 1px solid #b3d1ff;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+      gap: 15px;
+    }
+    .col {
+      flex: 1;
+      min-width: 180px;
+    }
+    label {
+      display: block;
+      font-weight: bold;
+      font-size: 12px;
+      margin-bottom: 4px;
+      color: #555;
+    }
+    input, select {
+      width: 100%;
+      padding: 7px 10px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    input[readonly] {
+      background-color: #e9ecef;
+      color: #495057;
+      cursor: not-allowed;
+      font-weight: bold;
+    }
+    .total-highlight {
+      background-color: #e2f0d9 !important;
+      color: #274e13 !important;
+    }
+    .btn-container {
+      text-align: center;
+      margin-top: 15px;
+    }
+    button {
+      background-color: #004080;
+      color: white;
+      border: none;
+      padding: 10px 30px;
+      font-size: 15px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #003366;
+    }
+    button:disabled {
+      background-color: #94b8b8;
+      cursor: not-allowed;
+    }
+    #loader {
+      display: none;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #004080;
+      border-radius: 50%;
+      width: 14px;
+      height: 14px;
+      animation: spin 1s linear infinite;
+      vertical-align: middle;
+      margin-left: 5px;
+    }
+    #saveLoader {
+      display: none;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid white;
+      border-radius: 50%;
+      width: 14px;
+      height: 14px;
+      animation: spin 1s linear infinite;
+      vertical-align: middle;
+      margin-left: 5px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="form-container">
+    <h2>Al Meezan ERP - Sales Entry</h2>
+    
+    <form id="salesForm" onsubmit="handleFormSubmit(event)" onkeydown="if(event.key === 'Enter') event.preventDefault();">
+      
+      <!-- PORTION 1: ACCOUNT DETAILS -->
+      <fieldset>
+        <legend>1. Account & Salesman Details</legend>
+        <div class="row">
+          <div class="col" style="max-width: 20%;">
+            <label for="date">Date</label>
+            <input type="date" id="date" required onchange="updateMinMonth()">
+          </div>
+          <div class="col" style="max-width: 25%;">
+            <label for="accountNo">Account No. <span id="loader"></span></label>
+            <input type="text" id="accountNo" placeholder="Type & Press Enter" onkeydown="handleAccountKey(event)" required autofocus>
+          </div>
+          <div class="col">
+            <label for="accountTitle">Account Title</label>
+            <input type="text" id="accountTitle" readonly placeholder="Auto-fetched">
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col">
+            <label for="salesman">Sales Man</label>
+            <input type="text" id="salesman" readonly placeholder="Auto-fetched">
+          </div>
+          <div class="col">
+            <label for="subSalesman">Sub Sales Man</label>
+            <input type="text" id="subSalesman" readonly placeholder="Auto-fetched">
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- PORTION 2: PRODUCT DETAILS -->
+      <fieldset>
+        <legend>2. Product Details</legend>
+        <div class="row">
+          <div class="col">
+            <label for="companyName">Company Name</label>
+            <input type="text" id="companyName" required>
+          </div>
+          <div class="col">
+            <label for="productCategory">Product Category</label>
+            <input type="text" id="productCategory" required>
+          </div>
+          <div class="col">
+            <label for="model">Model</label>
+            <input type="text" id="model" required>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col" style="max-width: 18%;">
+            <label for="qty">Quantity</label>
+            <input type="number" id="qty" value="1" oninput="calculateTotals()" required>
+          </div>
+          <div class="col">
+            <label for="salesRate">Sales Rate (Price)</label>
+            <input type="number" id="salesRate" oninput="calculateTotals()" required>
+          </div>
+          <div class="col">
+            <label for="salesAmt">Sales Amount</label>
+            <input type="number" id="salesAmt" readonly placeholder="Qty × Rate">
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- PORTION 3: CALCULATIONS & FINANCIALS -->
+      <fieldset>
+        <legend>3. Calculations & Financials</legend>
+        <div class="row">
+          <div class="col">
+            <label for="processingFee">Processing Fee</label>
+            <input type="number" id="processingFee" value="0" oninput="calculateTotals()">
+          </div>
+          <div class="col">
+            <label for="advance">Advance</label>
+            <input type="number" id="advance" value="0" oninput="calculateTotals()">
+          </div>
+          <div class="col">
+            <label for="planMonths">No. of Months (Plan)</label>
+            <input type="number" id="planMonths" value="0" oninput="calculateTotals()">
+          </div>
+          <div class="col">
+            <label for="installmentPerMonth">Per Month Installment</label>
+            <input type="number" id="installmentPerMonth" class="total-highlight" readonly placeholder="Auto calculated">
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col">
+            <label for="totalAmount">Total Amount (Sales + Fee)</label>
+            <input type="number" id="totalAmount" class="total-highlight" readonly placeholder="Auto calculated">
+          </div>
+          <div class="col">
+            <label for="firstInstallment">1st Installment (Included in Rcv)</label>
+            <input type="number" id="firstInstallment" value="0" oninput="calculateTotals()">
+          </div>
+          <div class="col">
+            <label for="totalReceivedAtStart">Total Received Amount</label>
+            <input type="number" id="totalReceivedAtStart" class="total-highlight" readonly placeholder="Auto Total">
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col" style="max-width: 32%;">
+            <label for="receiptNo">Receipt No. (For Receipts Sheet)</label>
+            <input type="text" id="receiptNo" placeholder="Enter Receipt No.">
+          </div>
+          <div class="col" style="max-width: 32%;">
+            <label for="nextInstallmentMonth">Next Installment Month (Aging Due)</label>
+            <select id="nextInstallmentMonth">
+              <option value="January">January</option>
+              <option value="February">February</option>
+              <option value="March">March</option>
+              <option value="April">April</option>
+              <option value="May">May</option>
+              <option value="June">June</option>
+              <option value="July">July</option>
+              <option value="August">August</option>
+              <option value="September">September</option>
+              <option value="October">October</option>
+              <option value="November">November</option>
+              <option value="December">December</option>
+            </select>
+          </div>
+          <div class="col"></div>
+        </div>
+      </fieldset>
+
+      <!-- REMARKS (Column R) -->
+      <fieldset>
+        <legend>4. Remarks</legend>
+        <div class="row">
+          <div class="col">
+            <label for="remarks">Remarks</label>
+            <input type="text" id="remarks" placeholder="Enter remarks here...">
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="btn-container">
+        <button type="submit" id="saveBtn">Save Sales & Receipt <span id="saveLoader"></span></button>
+      </div>
+
+    </form>
+  </div>
+
+  <script>
+    document.getElementById('date').valueAsDate = new Date();
+    updateMinMonth();
+
+    function updateMinMonth() {
+      let dateVal = document.getElementById('date').value;
+      if (!dateVal) return;
+
+      let selectedDate = new Date(dateVal);
+      let currentMonthIndex = selectedDate.getMonth();
+
+      let monthSelect = document.getElementById('nextInstallmentMonth');
+      let options = monthSelect.options;
+      let firstValidValue = "";
+
+      for (let i = 0; i < options.length; i++) {
+        if (i < currentMonthIndex) {
+          options[i].disabled = true;
+          options[i].style.color = "#ccc";
+        } else {
+          options[i].disabled = false;
+          options[i].style.color = "#000";
+          if (!firstValidValue) {
+            firstValidValue = options[i].value;
+          }
+        }
+      }
+
+      if (monthSelect.selectedIndex < currentMonthIndex) {
+        monthSelect.value = firstValidValue;
+      }
+    }
+
+    function handleAccountKey(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        let accNo = document.getElementById('accountNo').value.trim();
+        if (!accNo) return;
+
+        document.getElementById('loader').style.display = 'inline-block';
+
+        google.script.run
+          .withSuccessHandler(function(res) {
+            document.getElementById('loader').style.display = 'none';
+
+            if (res.success) {
+              document.getElementById('accountTitle').value = res.accountTitle;
+              document.getElementById('salesman').value = res.salesman;
+              document.getElementById('subSalesman').value = res.subSalesman;
+              
+              document.getElementById('companyName').focus();
+            } else {
+              alert(res.error);
+              document.getElementById('accountTitle').value = '';
+              document.getElementById('salesman').value = '';
+              document.getElementById('subSalesman').value = '';
+            }
+          })
+          .withFailureHandler(function(err) {
+            document.getElementById('loader').style.display = 'none';
+            alert("Error: " + err.message);
+          })
+          .getCustomerDetailsForSales(accNo); // <-- Yahan function name theek kar diya hai
+      }
+    }
+
+    function calculateTotals() {
+      let qty = Number(document.getElementById('qty').value) || 0;
+      let salesRate = Number(document.getElementById('salesRate').value) || 0;
+      let processingFee = Number(document.getElementById('processingFee').value) || 0;
+      let advance = Number(document.getElementById('advance').value) || 0;
+      let planMonths = Number(document.getElementById('planMonths').value) || 0;
+      let firstInst = Number(document.getElementById('firstInstallment').value) || 0;
+
+      let salesAmt = qty * salesRate;
+      document.getElementById('salesAmt').value = salesAmt;
+
+      let totalAmount = salesAmt + processingFee;
+      document.getElementById('totalAmount').value = totalAmount;
+
+      let perMonthInst = 0;
+      if (planMonths > 0) {
+        let balanceForInst = salesAmt - advance;
+        if (balanceForInst > 0) {
+          perMonthInst = Math.round(balanceForInst / planMonths);
+        }
+      }
+      document.getElementById('installmentPerMonth').value = perMonthInst;
+
+      let totalReceived = processingFee + advance + firstInst;
+      document.getElementById('totalReceivedAtStart').value = totalReceived;
+    }
+
+    function handleFormSubmit(e) {
+      e.preventDefault();
+      
+      let saveBtn = document.getElementById('saveBtn');
+      let saveLoader = document.getElementById('saveLoader');
+      saveBtn.disabled = true;
+      saveLoader.style.display = 'inline-block';
+      
+      let formData = {
+        date: document.getElementById('date').value,
+        accountNo: document.getElementById('accountNo').value,
+        accountTitle: document.getElementById('accountTitle').value,
+        salesman: document.getElementById('salesman').value,
+        subSalesman: document.getElementById('subSalesman').value,
+        companyName: document.getElementById('companyName').value,
+        productCategory: document.getElementById('productCategory').value,
+        model: document.getElementById('model').value,
+        qty: document.getElementById('qty').value,
+        salesRate: document.getElementById('salesRate').value,
+        salesAmt: document.getElementById('salesAmt').value,
+        planMonths: document.getElementById('planMonths').value,
+        advance: document.getElementById('advance').value,
+        installmentPerMonth: document.getElementById('installmentPerMonth').value,
+        processingFee: document.getElementById('processingFee').value,
+        totalAmount: document.getElementById('totalAmount').value,
+        firstInstallment: document.getElementById('firstInstallment').value,
+        nextInstallmentMonth: document.getElementById('nextInstallmentMonth').value,
+        totalReceivedAtStart: document.getElementById('totalReceivedAtStart').value,
+        receiptNo: document.getElementById('receiptNo').value,
+        remarks: document.getElementById('remarks').value
+      };
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          saveBtn.disabled = false;
+          saveLoader.style.display = 'none';
+
+          if (res.success) {
+            alert("Sales & Receipt saved successfully!");
+            document.getElementById('salesForm').reset();
+            document.getElementById('date').valueAsDate = new Date();
+            updateMinMonth();
+            document.getElementById('accountNo').focus();
+          } else {
+            alert("Error: " + res.error);
+          }
+        })
+        .withFailureHandler(function(err) {
+          saveBtn.disabled = false;
+          saveLoader.style.display = 'none';
+          alert("Error: " + err.message);
+        })
+        .saveSalesEntry(formData);
+    }
+  </script>
+
+</body>
+</html>

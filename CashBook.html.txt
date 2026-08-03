@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <style>
+    :root {
+      --primary: #1b5e20;
+      --primary-hover: #2e7d32;
+      --accent: #81c784;
+      --danger: #c62828;
+      --bg: #f4f6f8;
+      --surface: #ffffff;
+      --text: #333333;
+      --border: #cccccc;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 15px;
+      font-size: 13px;
+    }
+
+    .container {
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      max-width: 700px;
+      margin: auto;
+    }
+
+    h2 {
+      margin-top: 0;
+      color: var(--primary);
+      text-align: center;
+      font-size: 18px;
+      border-bottom: 2px solid var(--accent);
+      padding-bottom: 8px;
+    }
+
+    fieldset {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 15px;
+      background: #fafafa;
+    }
+
+    legend {
+      font-weight: bold;
+      color: var(--primary);
+      background: #e8f5e9;
+      padding: 3px 8px;
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .form-group {
+      flex: 1;
+      margin-bottom: 0;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 3px;
+      font-weight: 600;
+      color: #444;
+      font-size: 12px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 7px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 13px;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--primary);
+      outline: none;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .action-btn {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 13px;
+      color: #fff;
+      flex: 1;
+    }
+
+    .btn-primary { background-color: var(--primary); }
+    .btn-primary:hover { background-color: var(--primary-hover); }
+    .btn-secondary { background-color: #546e7a; }
+    .btn-secondary:hover { background-color: #455a64; }
+
+    .loader {
+      display: none;
+      text-align: center;
+      color: var(--primary);
+      font-weight: bold;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Al Meezan ERP - Cash & Bank Book Management</h2>
+
+  <div id="loader" class="loader">Processing request, please wait...</div>
+
+  <!-- DAILY CLOSING & RANGE SUMMARY SECTION -->
+  <fieldset>
+    <legend>Daily & Range Cash Closing</legend>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="fromDate">From Date *</label>
+        <input type="date" id="fromDate" onkeydown="handleDateEnter(event)">
+      </div>
+      <div class="form-group">
+        <label for="toDate">To Date *</label>
+        <input type="date" id="toDate" onkeydown="handleDateEnter(event)">
+      </div>
+    </div>
+    
+    <div class="form-row">
+      <div class="form-group">
+        <label for="openingCash">Opening Cash</label>
+        <input type="number" id="openingCash" value="0">
+      </div>
+      <div class="form-group">
+        <label for="totalCashIn">Total Cash In</label>
+        <input type="number" id="totalCashIn" value="0" readonly>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="totalCashOut">Total Cash Out</label>
+        <input type="number" id="totalCashOut" value="0" readonly>
+      </div>
+      <div class="form-group">
+        <label for="calculatedClosing">Calculated Closing Cash</label>
+        <input type="number" id="calculatedClosing" readonly>
+      </div>
+    </div>
+
+    <!-- Buttons & Sync Control -->
+    <div style="margin-top: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <button class="action-btn btn-primary" onclick="submitClosing()">Save Daily Closing</button>
+      <button class="action-btn btn-secondary" onclick="runSync()">Sync Receipts</button>
+      <button class="action-btn" id="stopSyncBtn" style="background-color: #d9534f; display:none;" onclick="stopSync()">Stop Sync</button>
+    </div>
+
+    <!-- Loading Spinner Overlay -->
+    <div id="loadingOverlay" style="display:none; text-align:center; margin-top:10px;">
+      <div class="spinner" style="border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+      <span style="font-size: 13px; color: #555;">Processing, please wait...</span>
+    </div>
+  </fieldset>
+
+  <style>
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+
+  <!-- CONTRA VOUCHER SECTION -->
+  <fieldset>
+    <legend>Contra Voucher Entry (Cash ⇄ Bank)</legend>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="contraDate">Date *</label>
+        <input type="date" id="contraDate">
+      </div>
+      <div class="form-group">
+        <label for="contraType">Transfer Type *</label>
+        <select id="contraType">
+          <option value="Cash to Bank">Cash to Bank (Deposit)</option>
+          <option value="Bank to Cash">Bank to Cash (Withdrawal)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="contraAmount">Amount (PKR) *</label>
+        <input type="number" id="contraAmount" placeholder="Enter amount...">
+      </div>
+      <div class="form-group" style="flex: 2;">
+        <label for="contraDesc">Description / Remarks</label>
+        <input type="text" id="contraDesc" placeholder="Narration...">
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="action-btn btn-primary" onclick="submitContra()">Save Contra Voucher</button>
+      <button class="action-btn btn-secondary" onclick="clearContraForm()">Reset</button>
+    </div>
+  </fieldset>
+</div>
+
+<script>
+  let isSyncing = false;
+
+  window.onload = function() {
+    let today = new Date().toISOString().split('T')[0];
+    document.getElementById('contraDate').value = today;
+    document.getElementById('fromDate').value = today;
+    document.getElementById('toDate').value = today;
+    // Page load par enter press ki shart ke mutabiq auto fetch nahi hoga, user enter press karega
+  };
+
+  function showLoader(show) {
+    document.getElementById('loader').style.display = show ? 'block' : 'none';
+  }
+
+  // Sirf Enter key press hone par working start hogi
+  function handleDateEnter(event) {
+    if (event.key === 'Enter') {
+      let fromDate = document.getElementById('fromDate').value;
+      let toDate = document.getElementById('toDate').value;
+      
+      if (fromDate && toDate) {
+        fetchRangeSummary(fromDate, toDate);
+      } else {
+        alert("Baraye meherbani From Date aur To Date dono select karein!");
+      }
+    }
+  }
+
+  function submitContra() {
+    let data = {
+      date: document.getElementById('contraDate').value,
+      type: document.getElementById('contraType').value,
+      amount: document.getElementById('contraAmount').value,
+      description: document.getElementById('contraDesc').value,
+      enteredBy: "Admin"
+    };
+
+    if (!data.date || !data.amount) {
+      alert("Date and Amount are required for Contra Voucher!");
+      return;
+    }
+
+    showLoader(true);
+    google.script.run
+      .withSuccessHandler(function(res) {
+        showLoader(false);
+        if (res.success) {
+          alert("Contra Voucher Saved Successfully!\nContra No: " + res.contraNo);
+          clearContraForm();
+        } else {
+          alert("Error: " + res.error);
+        }
+      })
+      .withFailureHandler(function(err) {
+        showLoader(false);
+        alert("Server Error: " + err.message);
+      })
+      .saveContraVoucher(data);
+  }
+
+  function clearContraForm() {
+    document.getElementById('contraAmount').value = '';
+    document.getElementById('contraDesc').value = '';
+    let today = new Date().toISOString().split('T')[0];
+    document.getElementById('contraDate').value = today;
+  }
+
+  function calculateDifference() {
+    let opening = parseFloat(document.getElementById('openingCash').value) || 0;
+    let cashIn = parseFloat(document.getElementById('totalCashIn').value) || 0;
+    let cashOut = parseFloat(document.getElementById('totalCashOut').value) || 0;
+    
+    let closing = (opening + cashIn) - cashOut;
+    document.getElementById('calculatedClosing').value = closing;
+  }
+
+  function submitClosing() {
+    let data = {
+      fromDate: document.getElementById('fromDate').value,
+      toDate: document.getElementById('toDate').value,
+      openingCash: document.getElementById('openingCash').value,
+      totalCashIn: document.getElementById('totalCashIn').value,
+      totalCashOut: document.getElementById('totalCashOut').value,
+      closingCash: document.getElementById('calculatedClosing').value,
+      status: "Closed"
+    };
+
+    showLoader(true);
+    google.script.run
+      .withSuccessHandler(function(res) {
+        showLoader(false);
+        if (res.success) {
+          alert("Daily/Range Closing Saved Successfully!");
+        } else {
+          alert("Error: " + res.error);
+        }
+      })
+      .withFailureHandler(function(err) {
+        showLoader(false);
+        alert("Server Error: " + err.message);
+      })
+      .saveDailyClosing(data);
+  }
+
+  function fetchRangeSummary(fromDate, toDate) {
+    document.getElementById('loadingOverlay').style.display = 'block';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        document.getElementById('loadingOverlay').style.display = 'none';
+        if (res.success) {
+          document.getElementById('openingCash').value = res.openingCash;
+          document.getElementById('totalCashIn').value = res.totalCashIn;
+          document.getElementById('totalCashOut').value = res.totalCashOut;
+          calculateDifference();
+        }
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('loadingOverlay').style.display = 'none';
+        console.error(err.message);
+      })
+      .getRangeSummaryData(fromDate, toDate);
+  }
+
+  function runSync() {
+    isSyncing = false;
+    document.getElementById('loadingOverlay').style.display = 'block';
+    document.getElementById('stopSyncBtn').style.display = 'inline-block';
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        document.getElementById('loadingOverlay').style.display = 'none';
+        document.getElementById('stopSyncBtn').style.display = 'none';
+        if (res.success) {
+          alert("Sync Completed Successfully! Total Added: " + res.count);
+          let fromDate = document.getElementById('fromDate').value;
+          let toDate = document.getElementById('toDate').value;
+          if(fromDate && toDate) fetchRangeSummary(fromDate, toDate);
+        }
+      })
+      .withFailureHandler(function(err) {
+        document.getElementById('loadingOverlay').style.display = 'none';
+        document.getElementById('stopSyncBtn').style.display = 'none';
+        alert("Error: " + err.message);
+      })
+      .syncReceiptsToCashBook();
+  }
+
+  function stopSync() {
+    isSyncing = true;
+    document.getElementById('loadingOverlay').style.display = 'none';
+    document.getElementById('stopSyncBtn').style.display = 'none';
+    alert("Sync process stopped by user.");
+  }
+</script>
+
+</body>
+</html>

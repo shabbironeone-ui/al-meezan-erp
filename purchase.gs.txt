@@ -1,0 +1,159 @@
+/*************************************************
+ * AL MEEZAN ERP PROFESSIONAL
+ * PURCHASE.GS
+ *************************************************/
+
+function savePurchase(purchase) {
+  if (!validatePurchase(purchase)) {
+    return false;
+  }
+  const purchaseId = getNextPurchaseId();
+  savePurchaseHeader(purchaseId, purchase);
+  savePurchaseDetails(purchaseId, purchase.items);
+  return purchaseId;
+}
+
+function savePurchaseHeader(purchaseId, purchase) {
+  const totalAmount = calculatePurchaseTotal(purchase.items);
+  dbInsert("PURCHASE HEADER", [
+    purchaseId,
+    purchase.purchaseDate,
+    purchase.supplierId,
+    purchase.supplierName,
+    purchase.invoiceNo,
+    purchase.warehouse,
+    totalAmount,
+    "ACTIVE",
+    purchase.remarks || "",
+    new Date(),
+    "ADMIN"
+  ]);
+}
+
+function savePurchaseDetails(purchaseId, items) {
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const batchNo = getNextBatchNo();
+    const productId = updateProductMaster(item);
+
+    dbInsert("PURCHASE DETAIL", [
+      purchaseId,
+      i + 1,
+      batchNo,
+      productId,
+      item.category,
+      item.brand,
+      item.model,
+      item.description,
+      Number(item.qty),
+      Number(item.costPrice),
+      Number(item.mrp),
+      Number(item.hpPercent),
+      Number(item.hpAmount),
+      Number(item.qty) * Number(item.costPrice)
+    ]);
+
+    updateStock({
+      date: purchase.purchaseDate,
+      productId: productId,
+      category: item.category,
+      brand: item.brand,
+      model: item.model,
+      qtyIn: Number(item.qty),
+      qtyOut: 0,
+      unitCost: Number(item.costPrice),
+      referenceType: "PURCHASE",
+      referenceId: purchaseId,
+      warehouse: purchase.warehouse
+    });
+  }
+}
+
+function calculatePurchaseTotal(items) {
+  let total = 0;
+  for (let i = 0; i < items.length; i++) {
+    total += Number(items[i].qty) * Number(items[i].costPrice);
+  }
+  return total;
+}
+
+function updateProductMaster(item) {
+  const sheet = dbSheet("PRODUCT MASTER");
+  const data = dbData("PRODUCT MASTER");
+
+  for (let i = 1; i < data.length; i++) {
+    if (
+      String(data[i][2]).trim().toUpperCase() == String(item.brand).trim().toUpperCase() &&
+      String(data[i][3]).trim().toUpperCase() == String(item.model).trim().toUpperCase()
+    ) {
+      sheet.getRange(i + 1, 7).setValue(item.costPrice);
+      sheet.getRange(i + 1, 8).setValue(item.mrp);
+      sheet.getRange(i + 1, 9).setValue(item.hpPercent);
+      sheet.getRange(i + 1, 10).setValue(item.hpAmount);
+      sheet.getRange(i + 1, 13).setValue(new Date());
+      return data[i][0];
+    }
+  }
+
+  const productId = getNextProductId();
+  dbInsert("PRODUCT MASTER", [
+    productId,
+    item.category,
+    item.brand,
+    item.model,
+    item.description,
+    item.supplier,
+    item.costPrice,
+    item.mrp,
+    item.hpPercent,
+    item.hpAmount,
+    "ACTIVE",
+    new Date(),
+    "",
+    "ADMIN"
+  ]);
+  return productId;
+}
+
+function validatePurchase(purchase) {
+  if (!purchase.purchaseDate) {
+    SpreadsheetApp.getUi().alert("Purchase Date Required.");
+    return false;
+  }
+  if (!purchase.supplierId) {
+    SpreadsheetApp.getUi().alert("Supplier Required.");
+    return false;
+  }
+  if (!purchase.items || purchase.items.length == 0) {
+    SpreadsheetApp.getUi().alert("No Purchase Items.");
+    return false;
+  }
+  return true;
+}
+
+function getNextPurchaseId() {
+  const sheet = dbSheet("PURCHASE HEADER");
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return "PU000001";
+  const lastId = String(sheet.getRange(lastRow, 1).getValue());
+  const nextNo = parseInt(lastId.replace("PU", ""), 10) + 1;
+  return "PU" + ("000000" + nextNo).slice(-6);
+}
+
+function getNextBatchNo() {
+  const sheet = dbSheet("PURCHASE DETAIL");
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return "B000001";
+  const lastBatch = String(sheet.getRange(lastRow, 3).getValue());
+  const nextNo = parseInt(lastBatch.replace("B", ""), 10) + 1;
+  return "B" + ("000000" + nextNo).slice(-6);
+}
+
+function getNextProductId() {
+  const sheet = dbSheet("PRODUCT MASTER");
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return "PR000001";
+  const lastId = String(sheet.getRange(lastRow, 1).getValue());
+  const nextNo = parseInt(lastId.replace("PR", ""), 10) + 1;
+  return "PR" + ("000000" + nextNo).slice(-6);
+}

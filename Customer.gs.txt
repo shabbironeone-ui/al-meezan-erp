@@ -1,0 +1,85 @@
+/*************************************************
+ * AL MEEZAN ERP PROFESSIONAL
+ * CUSTOMER.GS (UPDATED)
+ **************************************************/
+
+function getNextAccountNumber() {
+  try {
+    const sheet = getCOASheetForSales(); // Aapki COA sheet ka helper function
+    const lastRow = sheet.getLastRow();
+    
+    if (lastRow <= 1) {
+      return { success: true, nextAccNo: "7860101" }; // Default agar sheet khali ho
+    }
+    
+    // Col B (Index 2) se last account number uthayein
+    const lastAccNo = sheet.getRange(lastRow, 2).getValue();
+    let nextNum = parseInt(lastAccNo);
+    
+    if (isNaN(nextNum)) {
+      nextNum = 7868820; // Fallback based on your current data
+    }
+    
+    return { success: true, nextAccNo: String(nextNum + 1) };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+function saveNewCustomer(data) {
+  try {
+    const sheet = getCOASheetForSales();
+    const lastRow = sheet.getLastRow();
+    
+    // Server side par automatically agla account number generate karein taake duplicate na ho
+    const lastAccNo = lastRow > 1 ? sheet.getRange(lastRow, 2).getValue() : "7868820";
+    let nextAccNo = String(parseInt(lastAccNo) + 1);
+    let suffix = nextAccNo.slice(-4); // Last 4 digits for suffix column A
+
+    let combinedAccTitle = nextAccNo + " - " + data.accountTitle;
+
+    // Row array matching your exact sheet columns (A to S)
+    let rowData = [
+      suffix,                     // Col A: Suffix
+      nextAccNo,                  // Col B: Account No
+      data.accountTitle,          // Col C: Account Title
+      data.salesman,              // Col D: Salesman
+      data.subSalesman,           // Col E: Sub Salesman
+      data.mobileNo,              // Col F: Mobile Number
+      data.address,               // Col G: Address
+      data.department,            // Col H: Department
+      combinedAccTitle,           // Col I: Account No - Account Title
+      data.salary,                // Col J: Salary
+      data.designation,           // Col K: Designation
+      data.g1Name,                // Col L: Guarantor 1 Name
+      data.g1Mobile,              // Col M: Guarantor 1 Mobile
+      data.g1Dept,                // Col N: Guarantor 1 Dept
+      data.g1Desig,               // Col O: Guarantor 1 Desig
+      data.g2Name,                // Col P: Guarantor 2 Name
+      data.g2Mobile,              // Col Q: Guarantor 2 Mobile
+      data.g2Dept,                // Col R: Guarantor 2 Dept
+      data.g2Desig                // Col S: Guarantor 2 Desig
+    ];
+
+    sheet.appendRow(rowData);
+    return { success: true };
+
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+function customerExists(accountNo) {
+  try {
+    const sheet = getCOASheetForSales();
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][1]).trim() === String(accountNo).trim()) {
+        return true;
+      }
+    }
+    return false;
+  } catch (err) {
+    return false;
+  }
+}

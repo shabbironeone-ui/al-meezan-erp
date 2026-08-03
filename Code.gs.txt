@@ -1,0 +1,121 @@
+/*************************************************
+ * AL MEEZAN ERP PROFESSIONAL - CODE.GS
+ **************************************************/
+
+function onOpen(e) {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu("Al Meezan ERP Pro")
+    .addItem("Open Receipt Form", "showReceiptForm")
+    .addItem("Register New Customer (COA)", "showCustomerForm")
+    .addItem("Open Sales Entry Form", "showSalesForm")
+    .addItem("View Daily Recovery Report", "showReportsDialog")
+    .addItem("Refresh Dashboard", "refreshDashboard")
+    .addSeparator()
+    .addItem("Generate Aging Report", "generateCustomerAgingReport")
+    .addSeparator()
+    .addItem("Cash & Bank Book", "showCashBook")
+    .addSeparator()
+    .addItem("Initialize ERP System", "initializeERP")
+    .addToUi();
+}
+
+
+/*************************************************
+ * DATABASE HELPERS (GLOBAL)
+ *************************************************/
+function db() {
+  return SpreadsheetApp.getActiveSpreadsheet();
+}
+
+function dbSheet(name) {
+  let sheet = db().getSheetByName(name);
+  if (!sheet) {
+    sheet = db().insertSheet(name);
+  }
+  return sheet;
+}
+
+
+/*************************************************
+ * CUSTOMER AGING REPORT LAUNCHER
+ *************************************************/
+function generateCustomerAgingReport() {
+  const html = HtmlService.createHtmlOutputFromFile('AgingReportModal')
+    .setWidth(1250)
+    .setHeight(700);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Customer Aging Report & Analytics');
+}
+
+
+/*************************************************
+ * ERP INITIALIZATION
+ *************************************************/
+function initializeERP() {
+  initializeSettings();
+  initializeMaster();
+  initializeExpensesSheet();
+
+  SpreadsheetApp.getUi().alert(
+    "Al Meezan ERP Initialized Successfully."
+  );
+}
+
+
+/*************************************************
+ * SETTINGS SHEET
+ *************************************************/
+function initializeSettings() {
+  const sheet = dbSheet("SETTINGS");
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow([
+      "KEY",
+      "VALUE",
+      "DESCRIPTION"
+    ]);
+  }
+}
+
+
+/*************************************************
+ * MASTER SHEET
+ *************************************************/
+function initializeMaster() {
+  const sheet = dbSheet("MASTER");
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow([
+      "ID",
+      "TYPE",
+      "CODE",
+      "NAME",
+      "PARENT",
+      "STATUS",
+      "SORT",
+      "CREATED"
+    ]);
+  }
+}
+
+
+/*************************************************
+ * EXPENSE SHEET
+ *************************************************/
+function initializeExpensesSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName("EXPENSES");
+
+  if (!sheet) {
+    sheet = ss.insertSheet("EXPENSES");
+    sheet.appendRow([
+      "EXPENSE_ID",
+      "DATE",
+      "CATEGORY",
+      "DESCRIPTION",
+      "AMOUNT",
+      "PAID_TO",
+      "PAYMENT_MODE",
+      "WAREHOUSE",
+      "CREATED_BY",
+      "CREATED_DATE"
+    ]);
+  }
+}

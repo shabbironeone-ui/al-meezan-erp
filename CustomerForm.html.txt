@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <style>
+    :root {
+      --primary: #1b5e20;
+      --primary-hover: #2e7d32;
+      --accent: #81c784;
+      --danger: #c62828;
+      --bg: #f4f6f8;
+      --surface: #ffffff;
+      --text: #333333;
+      --border: #cccccc;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 15px;
+      font-size: 13px;
+    }
+
+    .container {
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      max-width: 650px;
+      margin: auto;
+    }
+
+    h2 {
+      margin-top: 0;
+      color: var(--primary);
+      text-align: center;
+      font-size: 18px;
+      border-bottom: 2px solid var(--accent);
+      padding-bottom: 8px;
+    }
+
+    fieldset {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 12px;
+      background: #fafafa;
+    }
+
+    legend {
+      font-weight: bold;
+      color: var(--primary);
+      background: #e8f5e9;
+      padding: 3px 8px;
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .form-group {
+      flex: 1;
+      margin-bottom: 0;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 3px;
+      font-weight: 600;
+      color: #444;
+      font-size: 12px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 7px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 13px;
+    }
+
+    input:focus {
+      border-color: var(--primary);
+      outline: none;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .action-btn {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 13px;
+      color: #fff;
+      flex: 1;
+    }
+
+    .btn-primary { background-color: var(--primary); }
+    .btn-primary:hover { background-color: var(--primary-hover); }
+    .btn-secondary { background-color: #546e7a; }
+    .btn-secondary:hover { background-color: #455a64; }
+
+    .loader {
+      display: none;
+      text-align: center;
+      color: var(--primary);
+      font-weight: bold;
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Al Meezan ERP - Customer Register (COA)</h2>
+
+  <div id="loader" class="loader">Saving customer data, please wait...</div>
+
+  <!-- BASIC INFORMATION -->
+  <fieldset>
+    <legend>Customer Basic Information</legend>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="accNo">Account No *</label>
+        <input type="text" id="accNo" placeholder="Auto generated..." readonly style="background-color: #e9ecef; cursor: not-allowed; font-weight: bold; color: #1b5e20;">
+      </div>
+      <div class="form-group" style="flex: 2;">
+        <label for="accTitle">Account Title (Customer Name) *</label>
+        <input type="text" id="accTitle" placeholder="Full name...">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="salesman">Sales Man</label>
+        <input type="text" id="salesman" placeholder="Salesman name...">
+      </div>
+      <div class="form-group">
+        <label for="subSalesman">Sub Sales Man</label>
+        <input type="text" id="subSalesman" placeholder="Sub salesman...">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="mobileNo">Mobile Number</label>
+        <input type="text" id="mobileNo" placeholder="Mobile no...">
+      </div>
+      <div class="form-group" style="flex: 2;">
+        <label for="address">Address</label>
+        <input type="text" id="address" placeholder="Address...">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="department">Department</label>
+        <input type="text" id="department" placeholder="Department...">
+      </div>
+      <div class="form-group">
+        <label for="salary">Salary</label>
+        <input type="number" id="salary" placeholder="Monthly salary...">
+      </div>
+      <div class="form-group">
+        <label for="designation">Designation</label>
+        <input type="text" id="designation" placeholder="Designation...">
+      </div>
+    </div>
+  </fieldset>
+
+  <!-- GUARANTOR 1 -->
+  <fieldset>
+    <legend>Guarantor 1 Details</legend>
+    <div class="form-row">
+      <div class="form-group" style="flex: 2;">
+        <label for="g1Name">Guarantor 1 Name</label>
+        <input type="text" id="g1Name" placeholder="Name...">
+      </div>
+      <div class="form-group">
+        <label for="g1Mobile">Mobile Number</label>
+        <input type="text" id="g1Mobile" placeholder="Mobile...">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="g1Dept">Department</label>
+        <input type="text" id="g1Dept" placeholder="Department...">
+      </div>
+      <div class="form-group">
+        <label for="g1Desig">Designation</label>
+        <input type="text" id="g1Desig" placeholder="Designation...">
+      </div>
+    </div>
+  </fieldset>
+
+  <!-- GUARANTOR 2 -->
+  <fieldset>
+    <legend>Guarantor 2 Details</legend>
+    <div class="form-row">
+      <div class="form-group" style="flex: 2;">
+        <label for="g2Name">Guarantor 2 Name</label>
+        <input type="text" id="g2Name" placeholder="Name...">
+      </div>
+      <div class="form-group">
+        <label for="g2Mobile">Mobile Number</label>
+        <input type="text" id="g2Mobile" placeholder="Mobile...">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="g2Dept">Department</label>
+        <input type="text" id="g2Dept" placeholder="Department...">
+      </div>
+      <div class="form-group">
+        <label for="g2Desig">Designation</label>
+        <input type="text" id="g2Desig" placeholder="Designation...">
+      </div>
+    </div>
+  </fieldset>
+
+  <div class="btn-row">
+    <button class="action-btn btn-primary" onclick="saveCustomer()">Save Customer</button>
+    <button class="action-btn btn-secondary" onclick="clearForm()">Reset</button>
+  </div>
+</div>
+
+<script>
+  // Page load hotay hi next account number automatically fetch ho jaye ga
+  window.onload = function() {
+    loadNextAccountNo();
+  };
+
+  function loadNextAccountNo() {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res && res.success) {
+          document.getElementById('accNo').value = res.nextAccNo;
+        }
+      })
+      .getNextAccountNumber();
+  }
+
+  function showLoader(show) {
+    document.getElementById('loader').style.display = show ? 'block' : 'none';
+  }
+
+  function saveCustomer() {
+    let data = {
+      accountTitle: document.getElementById('accTitle').value.trim(),
+      salesman: document.getElementById('salesman').value.trim(),
+      subSalesman: document.getElementById('subSalesman').value.trim(),
+      mobileNo: document.getElementById('mobileNo').value.trim(),
+      address: document.getElementById('address').value.trim(),
+      department: document.getElementById('department').value.trim(),
+      salary: document.getElementById('salary').value.trim(),
+      designation: document.getElementById('designation').value.trim(),
+      
+      g1Name: document.getElementById('g1Name').value.trim(),
+      g1Mobile: document.getElementById('g1Mobile').value.trim(),
+      g1Dept: document.getElementById('g1Dept').value.trim(),
+      g1Desig: document.getElementById('g1Desig').value.trim(),
+
+      g2Name: document.getElementById('g2Name').value.trim(),
+      g2Mobile: document.getElementById('g2Mobile').value.trim(),
+      g2Dept: document.getElementById('g2Dept').value.trim(),
+      g2Desig: document.getElementById('g2Desig').value.trim()
+    };
+
+    if (!data.accountTitle) {
+      alert("Account Title (Customer Name) is required!");
+      return;
+    }
+
+    showLoader(true);
+    google.script.run
+      .withSuccessHandler(function(res) {
+        showLoader(false);
+        if (res && res.success) {
+          alert("Customer Saved Successfully!");
+          clearForm();
+          loadNextAccountNo(); // Agla account number foran generate ho kar aa jaye ga
+        } else {
+          alert("Error: " + (res ? res.error : "Unknown error"));
+        }
+      })
+      .withFailureHandler(function(err) {
+        showLoader(false);
+        alert("Server Error: " + err.message);
+      })
+      .saveNewCustomer(data);
+  }
+
+  function clearForm() {
+    // Sab inputs clear hon gi lekin accNo apni jagah safe rahega taake next number na disturb ho
+    const inputs = document.querySelectorAll('input:not(#accNo)');
+    inputs.forEach(input => input.value = '');
+  }
+</script>
+
+</body>
+</html>

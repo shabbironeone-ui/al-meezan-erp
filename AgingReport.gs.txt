@@ -1,0 +1,217 @@
+/*************************************************
+ * AL MEEZAN ERP PROFESSIONAL
+ * AGINGREPORT.GS
+ * Aging Report Module
+ *************************************************/
+function generateCustomerAgingReport() {
+  const html = HtmlService.createHtmlOutputFromFile('AgingReportModal')
+    .setWidth(1250)
+    .setHeight(700);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Customer Aging Report & Analytics');
+}
+
+function parseCustomDate(value) {
+  if (!value) return null;
+  
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    let year = value.getFullYear();
+    if (year < 1950) {
+      value.setFullYear(year + 100);
+    }
+    return value;
+  }
+  
+  let strVal = String(value).trim();
+  if (!strVal) return null;
+
+  let parts = strVal.split(/[-/]/);
+  if (parts.length === 3) {
+    let day = parseInt(parts[0], 10);
+    let month = parseInt(parts[1], 10) - 1;
+    let year = parseInt(parts[2], 10);
+    
+    if (year < 100) {
+      year += 2000;
+    }
+    
+    let parsed = new Date(year, month, day);
+    if (!isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+
+  let parsed = new Date(strVal);
+  if (!isNaN(parsed.getTime())) {
+    let year = parsed.getFullYear();
+    if (year < 1950) {
+      parsed.setFullYear(year + 100);
+    }
+    return parsed;
+  }
+
+  return null;
+}
+
+function getAgingReportData() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  const saleSheet = ss.getSheetByName("SALE");
+  const receiptSheet = ss.getSheetByName("RECEIPTS");
+  const coaSheet = ss.getSheetByName("COA");
+  
+  if (!saleSheet) {
+    throw new Error("SALE sheet not found! Please check the sheet name.");
+  }
+  
+  const saleData = saleSheet.getDataRange().getValues();
+  const receiptData = receiptSheet ? receiptSheet.getDataRange().getValues() : [];
+  const coaData = coaSheet ? coaSheet.getDataRange().getValues() : [];
+  
+  let coaMap = {};
+  for (let i = 1; i < coaData.length; i++) {
+    let accNo = String(coaData[i][1] || "").trim(); // Col B
+    if (accNo) {
+      coaMap[accNo] = {
+        subSalesman: String(coaData[i][4] || "").trim(), // Col E
+        mobile: String(coaData[i][5] || "").trim()        // Col F
+      };
+    }
+  }
+  
+  let receiptMap = {};
+  for (let i = 1; i < receiptData.length; i++) {
+    let accNo = String(receiptData[i][3] || "").trim(); // Col D in Receipts
+    let amt = parseFloat(receiptData[i][7]) || 0;       // Col H in Receipts
+    if (accNo) {
+      receiptMap[accNo] = (receiptMap[accNo] || 0) + amt;
+    }
+  }
+  
+  let accountAggregates = {};
+  let filterOptions = {
+    accounts: new Set(),
+    salesmen: new Set(),
+    subSalesmen: new Set()
+  };
+  
+  const today = new Date();
+  
+  for (let i = 1; i < saleData.length; i++) {
+    let row = saleData[i];
+    let accNo = String(row[3] || "").trim(); // Col D: Account No
+    let accTitle = String(row[4] || "").trim(); // Col E: Account Title
+    
+    if (!accNo) continue;
+    
+    let salesman = String(row[2] || "").trim(); // Col C: Sales Man
+    let coaInfo = coaMap[accNo] || { subSalesman: "", mobile: "" };
+    let subSalesman = coaInfo.subSalesman;
+    let mobile = coaInfo.mobile;
+    
+    let productCategory = String(row[6] || row[7] || "").trim(); 
+    let plan = String(row[11] || "") + " M";   // Col L: Plan Months
+    let saleDateVal = row[1];                  // Col B: Date
+    let nextInstDateVal = row[16];             // Col Q: Next Installment / Recommendation Date
+    let monthlyInst = parseFloat(row[13]) || 0;  // Col N: Installment
+    let totalSales = parseFloat(row[15]) || 0;   // Col P: Total Amt
+    
+    if (accNo) {
+      filterOptions.accounts.add(accNo);
+      if(accTitle) filterOptions.accounts.add(accNo + " - " + accTitle);
+    }
+    if (salesman) filterOptions.salesmen.add(salesman);
+    if (subSalesman) filterOptions.subSalesmen.add(subSalesman);
+    
+    let bracket0_30 = 0, bracket31_60 = 0, bracket61_90 = 0, bracket91_plus = 0;
+    
+    let formattedDate = "";
+    let parsedDateObj = parseCustomDate(saleDateVal);
+    
+    if (parsedDateObj) {
+      formattedDate = Utilities.formatDate(parsedDateObj, Session.getScriptTimeZone(), "yyyy-MM-dd");
+    }
+
+    // Aging Calculation based on Column Q (Next Installment Date) if available, fallback to Sale Date
+    let targetDateObj = parseCustomDate(nextInstDateVal) || parsedDateObj;
+    
+    if (targetDateObj) {
+      const diffTime = today - targetDateObj;
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      // Agar installment ya recovery ka din qareeb hai ya overdue ho chuka hai
+      if (diffDays <= 30) bracket0_30 = totalSales;
+      else if (diffDays <= 60) bracket31_60 = totalSales;
+      else if (diffDays <= 90) bracket61_90 = totalSales;
+      else bracket91_plus = totalSales;
+    } else {
+      bracket0_30 = totalSales;
+    }
+
+    if (accountAggregates[accNo]) {
+      accountAggregates[accNo].totalSales += totalSales;
+      accountAggregates[accNo].monthlyInst += monthlyInst;
+      accountAggregates[accNo].b0_30 += bracket0_30;
+      accountAggregates[accNo].b31_60 += bracket31_60;
+      accountAggregates[accNo].b61_90 += bracket61_90;
+      accountAggregates[accNo].b91_plus += bracket91_plus;
+      
+      if (productCategory && !accountAggregates[accNo].productCategories.includes(productCategory)) {
+        accountAggregates[accNo].productCategories.push(productCategory);
+      }
+      
+      if (formattedDate && !accountAggregates[accNo].deliveryDates.includes(formattedDate)) {
+        accountAggregates[accNo].deliveryDates.push(formattedDate);
+      }
+    } else {
+      let totalReceived = receiptMap[accNo] || 0;
+      
+      accountAggregates[accNo] = {
+        accNo: accNo,
+        accTitle: accTitle,
+        salesman: salesman,
+        subSalesman: subSalesman,
+        mobile: mobile,
+        productCategories: productCategory ? [productCategory] : [],
+        deliveryDates: formattedDate ? [formattedDate] : [],
+        plan: plan,
+        totalSales: totalSales,
+        totalReceived: totalReceived,
+        balance: 0,
+        monthlyInst: monthlyInst,
+        b0_30: bracket0_30,
+        b31_60: bracket31_60,
+        b61_90: bracket61_90,
+        b91_plus: bracket91_plus
+      };
+    }
+  }
+
+  let reportList = [];
+  for (let accNo in accountAggregates) {
+    let item = accountAggregates[accNo];
+    let totalRec = receiptMap[accNo] || 0;
+    item.totalReceived = totalRec;
+    item.balance = item.totalSales - totalRec;
+    item.product = item.productCategories.join(", ");
+    item.deliveryDate = item.deliveryDates.join(", ");
+    reportList.push(item);
+  }
+  
+  let uniqueAccountsObj = [];
+  let addedAccs = new Set();
+  reportList.forEach(r => {
+    if (!addedAccs.has(r.accNo)) {
+      addedAccs.add(r.accNo);
+      uniqueAccountsObj.push({ accNo: r.accNo, accTitle: r.accTitle });
+    }
+  });
+
+  return {
+    data: reportList,
+    filters: {
+      accountsObj: uniqueAccountsObj,
+      salesmen: Array.from(filterOptions.salesmen).sort(),
+      subSalesmen: Array.from(filterOptions.subSalesmen).sort()
+    }
+  };
+}

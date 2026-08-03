@@ -1,0 +1,42 @@
+/*************************************************
+ * AL MEEZAN ERP PROFESSIONAL
+ * EXPENSE.GS
+ *************************************************/
+
+function saveExpense(expenseData) {
+  try {
+    const sheet = dbSheet("EXPENSES");
+    const expenseId = "EXP-" + new Date().getTime();
+    const timestamp = new Date();
+    
+    sheet.appendRow([
+      expenseId,
+      expenseData.date || timestamp,
+      expenseData.category,
+      expenseData.description,
+      expenseData.amount,
+      expenseData.paidTo,
+      expenseData.paymentMode,
+      expenseData.warehouse || "Main Store",
+      expenseData.createdBy || Session.getActiveUser().getEmail(),
+      timestamp
+    ]);
+
+    return { success: true, expenseId: expenseId };
+  } catch (error) {
+    return { success: false, error: error.toString() };
+  }
+}
+
+function getExpenseList() {
+  const sheet = dbSheet("EXPENSES");
+  if (sheet.getLastRow() <= 1) return [];
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  
+  return data.slice(1).map(row => {
+    let obj = {};
+    headers.forEach((h, i) => obj[h] = row[i]);
+    return obj;
+  });
+}

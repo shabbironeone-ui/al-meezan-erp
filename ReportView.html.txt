@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f6f9;
+      margin: 0;
+      padding: 15px;
+      color: #333;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      color: #1b5e20;
+      margin-bottom: 15px;
+      font-size: 20px;
+    }
+    .filter-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .filter-row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 120px;
+      gap: 10px;
+      margin-bottom: 15px;
+      align-items: end;
+    }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .input-group label {
+      font-size: 11px;
+      font-weight: bold;
+      color: #555;
+      margin-bottom: 3px;
+    }
+    input[type="text"], input[type="date"] {
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    button {
+      background-color: #1b5e20;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 13px;
+      height: 38px;
+    }
+    button:hover {
+      background-color: #144316;
+    }
+    
+    /* Loading Spinner Styling */
+    #loadingContainer {
+      display: none;
+      text-align: center;
+      margin: 20px 0;
+    }
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #1b5e20;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 8px auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    #loadingMsg {
+      color: #1b5e20;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .table-container {
+      max-height: 280px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #1b5e20;
+      color: white;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    tr:hover {
+      background-color: #f1f1f1;
+    }
+    .summary-box {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 15px;
+      font-weight: bold;
+      font-size: 14px;
+      background: #e8f5e9;
+      padding: 12px;
+      border-radius: 4px;
+      color: #1b5e20;
+    }
+  @media print{button,.filter-section,.filter-row-2,#loadingContainer{display:none!important}.container{max-width:100%;box-shadow:none}.table-container{max-height:none;overflow:visible}}</style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>Al-Meezan Electronics - Daily Recovery Report</h2>
+    
+    <div class="filter-section">
+      <div class="input-group">
+        <label>FROM DATE</label>
+        <input type="date" id="fromDate">
+      </div>
+      <div class="input-group">
+        <label>TO DATE</label>
+        <input type="date" id="toDate">
+      </div>
+    </div>
+
+    <div class="filter-row-2">
+      <div class="input-group">
+        <label>SEARCH ACCOUNT / NAME</label>
+        <input type="text" id="searchAccInput" placeholder="Acc No or Customer Name...">
+      </div>
+      <div class="input-group">
+        <label>RECEIPT NO / BOOK NO</label>
+        <input type="text" id="searchReceiptInput" placeholder="Receipt or Book No...">
+      </div>
+      <button onclick="fetchAndFilterData()"><i class="fa fa-search"></i> Search</button><button onclick="resetFilters()">Reset</button><button onclick="printReport()">Print</button><button onclick="openReceiptForm()">New Receipt</button>
+    </div>
+
+    <!-- Animated Spinner & Loading Message -->
+    <div id="loadingContainer">
+      <div class="spinner"></div>
+      <div id="loadingMsg">Fetching records... Please wait.</div>
+    </div>
+
+    <div class="table-container">
+      <table id="reportTable">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Rct #</th>
+            <th>Acc No</th>
+            <th>Customer Title</th>
+            <th>Salesman</th>
+            <th>Book #</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr>
+            <td colspan="7" style="text-align: center; color: #777;">Please select filters and click "Search".</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="summary-box">
+      <span id="totalRecords">Total Records: 0</span>
+      <span id="totalAmount">Total Recovered Amount: Rs. 0</span>
+    </div>
+  </div>
+
+  <script>
+    let globalData = null; // Browser-level session cache
+
+    function fetchAndFilterData() {
+      // Agar data pehle se browser mein cached hai, toh server par dobara request mat bhejo! (Instant speed)
+      if (globalData !== null) {
+        applySearchFilter();
+        return;
+      }
+
+      // Pehli dafa server se fetch hoga
+      document.getElementById('loadingContainer').style.display = 'block';
+      document.getElementById('loadingMsg').innerText = "Fetching records... Please wait.";
+
+      google.script.run
+        .withSuccessHandler(function(response) {
+          document.getElementById('loadingContainer').style.display = 'none';
+          if (response && response.success) {
+            globalData = response.data; // Save to browser session cache
+            applySearchFilter();
+          } else {
+            alert("Error: " + (response ? response.error : "Unknown error"));
+          }
+        })
+        .withFailureHandler(function(err) {
+          document.getElementById('loadingContainer').style.display = 'none';
+          alert("Script Failure: " + err.message);
+        })
+        .getAllReceiptsForReport();
+    }
+
+    function applySearchFilter() {
+      if (!globalData) return;
+
+      let fromDate = document.getElementById('fromDate').value;
+      let toDate = document.getElementById('toDate').value;
+      let accQuery = document.getElementById('searchAccInput').value.toLowerCase().trim();
+      let receiptQuery = document.getElementById('searchReceiptInput').value.toLowerCase().trim();
+
+      let fTime = fromDate ? new Date(fromDate).setHours(0,0,0,0) : null;
+      let tTime = toDate ? new Date(toDate).setHours(23,59,59,999) : null;
+      
+      let filtered = globalData.filter(row => {
+        // Date Range Check
+        if (fTime && row.dateObj && row.dateObj < fTime) return false;
+        if (tTime && row.dateObj && row.dateObj > tTime) return false;
+
+        let acc = String(row.accountNo).toLowerCase();
+        let title = String(row.accountTitle).toLowerCase();
+        let rct = String(row.receiptNo).toLowerCase();
+        let book = String(row.bookNo).toLowerCase();
+        
+        // Account/Name Filter Check
+        let matchesAcc = true;
+        if (accQuery) {
+          matchesAcc = acc.includes(accQuery) || title.includes(accQuery);
+        }
+
+        // Receipt/Book Filter Check
+        let matchesReceipt = true;
+        if (receiptQuery) {
+          matchesReceipt = rct.includes(receiptQuery) || book.includes(receiptQuery);
+        }
+
+        return matchesAcc && matchesReceipt;
+      });
+      
+      renderTableRows(filtered);
+    }
+
+    function renderTableRows(data) {
+      let tbody = document.getElementById('tableBody');
+      tbody.innerHTML = "";
+
+      if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #777;">No records found.</td></tr>`;
+        document.getElementById('totalRecords').innerText = "Total Records: 0";
+        document.getElementById('totalAmount').innerText = "Total Recovered Amount: Rs. 0";
+        return;
+      }
+
+      let totalRecs = data.length;
+      let totalAmt = 0;
+      let html = "";
+
+      data.forEach(row => {
+        totalAmt += Number(row.amount) || 0;
+        html += `<tr>
+          <td>${row.dateStr || ''}</td>
+          <td>${row.receiptNo || ''}</td>
+          <td>${row.accountNo || ''}</td>
+          <td>${row.accountTitle || ''}</td>
+          <td>${row.salesman || ''}</td>
+          <td>${row.bookNo || ''}</td>
+          <td>${(Number(row.amount) || 0).toLocaleString()}</td>
+        </tr>`;
+      });
+
+      tbody.innerHTML = html;
+      document.getElementById('totalRecords').innerText = "Total Records: " + totalRecs;
+      document.getElementById('totalAmount').innerText = "Total Recovered Amount: Rs. " + totalAmt.toLocaleString();
+    }
+  
+document.addEventListener('DOMContentLoaded',()=>['searchAccInput','searchReceiptInput','fromDate','toDate'].forEach(id=>document.getElementById(id).addEventListener('keypress',e=>{if(e.key==='Enter')fetchAndFilterData();})));
+function resetFilters(){fromDate.value='';toDate.value='';searchAccInput.value='';searchReceiptInput.value='';if(globalData)renderTableRows(globalData);}
+function printReport(){window.print();}
+function openReceiptForm(){google.script.run.showReceiptForm();}
+</script>
+</body>
+</html>

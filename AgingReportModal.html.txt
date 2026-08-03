@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 10px; background-color: #f4f6f9; color: #333; font-size: 13px; }
+    h2 { text-align: center; color: #1a73e8; margin: 5px 0 15px 0; font-size: 16px; }
+    
+    .filter-panel { background: #fff; padding: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .filter-group { display: flex; flex-direction: column; flex: 1; min-width: 120px; }
+    .filter-group.balance-group { min-width: 180px; }
+    .filter-group label { font-weight: bold; margin-bottom: 3px; color: #555; font-size: 11px; }
+    .filter-group select, .filter-group input { padding: 5px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; }
+    
+    .balance-filter-inline { display: flex; gap: 4px; }
+    
+    .btn-container { display: flex; align-items: flex-end; gap: 4px; }
+    .btn { padding: 6px 10px; background: #1a73e8; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 11px; }
+    .btn:hover { background: #1557b0; }
+    .btn-generate { background: #f9ab00; color: #000; }
+    .btn-generate:hover { background: #e09900; }
+    .btn-print { background: #34a853; }
+    .btn-print:hover { background: #2b8743; }
+    .btn-reset { background: #999; }
+    .btn-reset:hover { background: #777; }
+
+    .table-container { 
+      max-height: 480px; 
+      overflow-y: auto; 
+      overflow-x: auto; 
+      background: #fff; 
+      border-radius: 6px; 
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+      position: relative; 
+    }
+    
+    table { width: max-content; min-width: 100%; table-layout: auto; border-collapse: collapse; background: #fff; font-size: 11px; }
+    
+    th, td { border: 1px solid #ddd; padding: 2px 4px; text-align: left; white-space: nowrap; line-height: 1.1; font-size: 11px; }
+    
+   th:nth-child(1), td:nth-child(1) { width: 65px; }
+   th:nth-child(2), td:nth-child(2) { width: 115px; }
+   th:nth-child(3), td:nth-child(3) { width: 60px; }
+   th:nth-child(4), td:nth-child(4) { width: 60px; }
+   th:nth-child(5), td:nth-child(5) { width: 85px; }
+   th:nth-child(6), td:nth-child(6) { width: 90px; max-width: 90px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+   th:nth-child(7), td:nth-child(7) { width: 40px; text-align: center; }
+   th:nth-child(8), td:nth-child(8) { width: 75px; }
+   th:nth-child(9), td:nth-child(9) { width: 75px; }
+   th:nth-child(10), td:nth-child(10) { width: 75px; }
+   th:nth-child(11), td:nth-child(11) { width: 65px; }
+   th:nth-child(12), td:nth-child(12) { width: 65px; }
+   th:nth-child(13), td:nth-child(13) { width: 55px; }
+   th:nth-child(14), td:nth-child(14) { width: 55px; }
+   th:nth-child(15), td:nth-child(15) { width: 55px; }
+   th:nth-child(16), td:nth-child(16) { width: 55px; }
+
+    th { background-color: #1a73e8; color: white; position: sticky; top: 0; z-index: 10; cursor: pointer; user-select: none; font-size: 11px; }
+    th:hover { background-color: #1557b0; }
+    
+    .search-wrapper { position: relative; margin-top: 4px; }
+    th .col-search { display: none; width: 90%; padding: 3px; font-size: 11px; border: 1px solid #ccc; border-radius: 3px; background: #fff; color: #000; cursor: text; }
+    .ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+    
+    .suggestions-list {
+      display: none; position: absolute; left: 0; top: 100%; width: 100%; max-height: 150px;
+      overflow-y: auto; background: #fff; border: 1px solid #ccc; border-radius: 0 0 4px 4px;
+      z-index: 15; box-shadow: 0 4px 6px rgba(0,0,0,0.15); color: #333; text-align: left;
+    }
+    .suggestions-list div { padding: 5px 8px; font-size: 11px; cursor: pointer; border-bottom: 1px solid #eee; white-space: nowrap; }
+    .suggestions-list div:hover { background-color: #e8f0fe; color: #1a73e8; }
+
+    tr:nth-child(even) { background-color: #f9f9f9; }
+    .number { text-align: right; }
+    .loading { text-align: center; font-size: 13px; padding: 25px; color: #666; background: #fff; border-radius: 6px; }
+    .footer-total { font-weight: bold; background-color: #e8f0fe !important; position: sticky; bottom: 0; z-index: 5; cursor: default !important; }
+
+    .clickable-acc { color: #1a73e8; cursor: pointer; text-decoration: underline; font-weight: bold; }
+    .clickable-acc:hover { color: #1557b0; }
+
+    #ledgerModal {
+      display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%;
+      background-color: rgba(0,0,0,0.5); overflow-y: auto; padding: 20px; box-sizing: border-box;
+    }
+    .ledger-content {
+      background: #fff; max-width: 800px; margin: 30px auto; padding: 25px; border-radius: 8px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3); position: relative;
+    }
+    .close-data-btn { position: absolute; right: 20px; top: 15px; font-size: 22px; font-weight: bold; cursor: pointer; color: #777; }
+    .close-data-btn:hover { color: #000; }
+    
+    @media print {
+      body * { visibility: hidden; }
+      #ledgerModal, #ledgerModal * { visibility: visible; }
+      #ledgerModal { position: absolute; left: 0; top: 0; width: 100%; background: white; padding: 0; }
+      .no-print { display: none !important; }
+    }
+    .resize-handle { position:absolute; top:0; right:-2px; width:6px; height:100%; cursor:col-resize; z-index:9999; }
+    .resize-handle:hover { background:#ff9800; }
+  </style>
+</head>
+<body>
+
+  <h2>Customer Aging Report & Analytics</h2>
+  
+  <div class="filter-panel">
+    <div class="filter-group">
+      <label>Salesman:</label>
+      <select id="filterSalesman"><option value="">All Salesmen</option></select>
+    </div>
+    <div class="filter-group">
+      <label>Sub Salesman:</label>
+      <select id="filterSubSalesman"><option value="">All Sub Salesmen</option></select>
+    </div>
+    <div class="filter-group">
+      <label>From Account:</label>
+      <select id="filterFromAccount"><option value="">Start Account</option></select>
+    </div>
+    <div class="filter-group">
+      <label>To Account:</label>
+      <select id="filterToAccount"><option value="">End Account</option></select>
+    </div>
+    <div class="filter-group">
+      <label>From Date:</label>
+      <input type="date" id="fromDate">
+    </div>
+    <div class="filter-group">
+      <label>To Date:</label>
+      <input type="date" id="toDate">
+    </div>
+    <div class="filter-group balance-group">
+      <label>Balance Filter:</label>
+      <div class="balance-filter-inline">
+        <select id="balanceOperator" style="width: 50%;">
+          <option value="all">All</option>
+          <option value="gt">&gt;</option>
+          <option value="lt">&lt;</option>
+          <option value="eq">=</option>
+          <option value="gt_zero">&gt; 0</option>
+        </select>
+        <input type="number" id="balanceValue" placeholder="Amount" style="width: 50%;">
+      </div>
+    </div>
+    <div class="btn-container">
+      <button class="btn btn-generate" onclick="applyFilters()">Generate</button>
+      <button class="btn btn-reset" onclick="resetFilters()">Reset</button>
+      <button class="btn btn-print" onclick="window.print()">Print</button>
+    </div>
+  </div>
+
+  <div id="loading" class="loading">Fetching data from Sales and Receipts... Please wait.</div>
+  
+  <div class="table-container">
+    <table id="reportTable" style="display: none;">
+      <thead>
+        <tr id="headerRow">
+          <th onclick="toggleColSearch(event, 0)">Account No.<div class="search-wrapper"><input type="text" class="col-search" placeholder="Search..." oninput="onColSearchInput(event, 0)" onclick="event.stopPropagation()"><div class="suggestions-list"></div></div></th>
+          <th onclick="toggleColSearch(event, 1)">Account Title<div class="search-wrapper"><input type="text" class="col-search" placeholder="Search..." oninput="onColSearchInput(event, 1)" onclick="event.stopPropagation()"><div class="suggestions-list"></div></div></th>
+          <th onclick="toggleColSearch(event, 2)">Salesman<div class="search-wrapper"><input type="text" class="col-search" placeholder="Search..." oninput="onColSearchInput(event, 2)" onclick="event.stopPropagation()"><div class="suggestions-list"></div></div></th>
+          <th onclick="toggleColSearch(event, 3)">Sub Salesman<div class="search-wrapper"><input type="text" class="col-search" placeholder="Search..." oninput="onColSearchInput(event, 3)" onclick="event.stopPropagation()"><div class="suggestions-list"></div></div></th>
+          <th onclick="toggleColSearch(event, 4)">Mobile No<div class="search-wrapper"><input type="text" class="col-search" placeholder="Search..." oninput="onColSearchInput(event, 4)" onclick="event.stopPropagation()"><div class="suggestions-list"></div></div></th>
+          <th onclick="toggleColSearch(event, 5)">Product Category<div class="search-wrapper"><input type="text" class="col-search" placeholder="Search..." oninput="onColSearchInput(event, 5)" onclick="event.stopPropagation()"><div class="suggestions-list"></div></div></th>
+          <th onclick="toggleColSearch(event, 6)">Plan<div class="search-wrapper"><input type="text" class="col-search" placeholder="Search..." oninput="onColSearchInput(event, 6)" onclick="event.stopPropagation()"><div class="suggestions-list"></div></div></th>
+          <th class="number" onclick="toggleColSearch(event, 7)">Total Sales<div class="search-wrapper"><input type="text" class="col-search" placeholder="Search..." oninput="onColSearchInput(event, 7)" onclick="event.stopPropagation()"><div class="suggestions-list"></div></div></th>
+          <th class="number" onclick="toggleColSearch(event, 8)">Total Received<div class="search-wrapper"><input type="text" class="col-search" placeholder="Search..." oninput="onColSearchInput(event, 8)" onclick="event.stopPropagation()"><div class="suggestions-list"></div></div></th>
+          <th class="number" onclick="toggleColSearch(event, 9)">Balance Outstanding<div class="search-wrapper"><input type="text" class="col-search" placeholder="Search..." oninput="onColSearchInput(event, 9)" onclick="event.stopPropagation()"><div class="suggestions-list"></div></div></th>
+          <th onclick="toggleColSearch(event, 10)">Delivery Date<div class="search-wrapper"><input type="text" class="col-search" placeholder="Search..." oninput="onColSearchInput(event, 10)" onclick="event.stopPropagation()"><div class="suggestions-list"></div></div></th>
+          <th class="number" onclick="toggleColSearch(event, 11)">Monthly Inst<div class="search-wrapper"><input type="text" class="col-search" placeholder="Search..." oninput="onColSearchInput(event, 11)" onclick="event.stopPropagation()"><div class="suggestions-list"></div></div></th>
+          <th class="number" onclick="toggleColSearch(event, 12)">0-30</th>
+          <th class="number" onclick="toggleColSearch(event, 13)">31-60</th>
+          <th class="number" onclick="toggleColSearch(event, 14)">61-90</th>
+          <th class="number" onclick="toggleColSearch(event, 15)">91-120+</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Ledger Popup Modal -->
+  <div id="ledgerModal">
+    <div class="ledger-content">
+      <span class="close-data-btn no-print" onclick="closeLedgerModal()">&times;</span>
+      <div id="ledgerBodyContent"></div>
+      <div style="text-align: right; margin-top: 20px;" class="no-print">
+        <button class="btn btn-print" onclick="window.print()">Print Ledger</button>
+        <button class="btn btn-reset" onclick="closeLedgerModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let globalData = [];
+    let rawAccountsList = [];
+    let currentRenderedRows = [];
+
+    window.onload = function() {
+      setLoading(true);
+      google.script.run
+        .withSuccessHandler(function(response) {
+          setLoading(false);
+          document.getElementById('loading').style.display = 'none';
+          globalData = response.data;
+          rawAccountsList = response.filters.accountsObj || [];
+          populateDropdown('filterSalesman', response.filters.salesmen);
+          populateDropdown('filterSubSalesman', response.filters.subSalesmen);
+          populateAccountDropdowns(rawAccountsList);
+          renderTable(globalData);
+          setTimeout(makeColumnsResizable, 300);
+        })
+        .withFailureHandler(function(err) {
+          setLoading(false);
+          document.getElementById('loading').innerHTML = '<span style="color:red;">Error: ' + err.message + '</span>';
+        })
+        .getAgingReportData();
+
+      document.addEventListener('click', function(e) {
+        if (!e.target.closest('th')) {
+          document.querySelectorAll('.suggestions-list').forEach(list => list.style.display = 'none');
+        }
+      });
+    };
+
+    function setLoading(isWaiting) {
+      if (isWaiting) document.body.classList.add('waiting');
+      else document.body.classList.remove('waiting');
+    }
+
+    function toggleColSearch(event, colIndex) {
+      let th = event.currentTarget;
+      let input = th.querySelector('.col-search');
+      if (input) {
+        if (input.style.display === 'block') {
+          input.style.display = 'none';
+          input.value = '';
+          th.querySelector('.suggestions-list').style.display = 'none';
+          filterTableColumns();
+        } else {
+          input.style.display = 'block';
+          input.focus();
+        }
+      }
+    }
+
+    function getColumnUniqueValues(colIndex) {
+      let valuesSet = new Set();
+      let table = document.getElementById('reportTable');
+      let trs = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+      for (let i = 0; i < trs.length; i++) {
+        if (trs[i].classList.contains('footer-total')) continue;
+        let tdArray = trs[i].getElementsByTagName('td');
+        if (tdArray[colIndex]) {
+          let val = (tdArray[colIndex].textContent || tdArray[colIndex].innerText).trim();
+          if (val) valuesSet.add(val);
+        }
+      }
+      return Array.from(valuesSet).sort();
+    }
+
+    function onColSearchInput(event, colIndex) {
+      event.stopPropagation();
+      let input = event.target;
+      let filterVal = input.value.toLowerCase();
+      let wrapper = input.parentElement;
+      let suggestionsBox = wrapper.querySelector('.suggestions-list');
+      filterTableColumns();
+      let uniqueVals = getColumnUniqueValues(colIndex);
+      let matched = uniqueVals.filter(v => v.toLowerCase().includes(filterVal));
+      suggestionsBox.innerHTML = '';
+      if (matched.length > 0 && filterVal.length > 0) {
+        matched.forEach(item => {
+          let div = document.createElement('div');
+          div.textContent = item;
+          div.onclick = function(e) {
+            e.stopPropagation();
+            input.value = item;
+            suggestionsBox.style.display = 'none';
+            filterTableColumns();
+          };
+          suggestionsBox.appendChild(div);
+        });
+        suggestionsBox.style.display = 'block';
+      } else {
+        suggestionsBox.style.display = 'none';
+      }
+    }
+
+    function filterTableColumns() {
+      let table = document.getElementById('reportTable');
+      let tbody = table.getElementsByTagName('tbody')[0];
+      let trs = tbody.getElementsByTagName('tr');
+      let inputs = table.querySelectorAll('th .col-search');
+      
+      let tSales = 0, tRec = 0, tBal = 0, tMonthlyInst = 0, t0_30 = 0, t31_60 = 0, t61_90 = 0, t91_plus = 0;
+
+      for (let i = 0; i < trs.length; i++) {
+        if (trs[i].classList.contains('footer-total')) continue;
+        let tdArray = trs[i].getElementsByTagName('td');
+        let showRow = true;
+        for (let j = 0; j < inputs.length; j++) {
+          let filterVal = inputs[j].value.toLowerCase();
+          if (filterVal && tdArray[j]) {
+            let textValue = tdArray[j].textContent || tdArray[j].innerText;
+            if (textValue.toLowerCase().indexOf(filterVal) === -1) {
+              showRow = false;
+              break;
+            }
+          }
+        }
+        trs[i].style.display = showRow ? '' : 'none';
+
+        if (showRow) {
+          let originalRowData = currentRenderedRows[i];
+          if (originalRowData) {
+            tSales += originalRowData.totalSales;
+            tRec += originalRowData.totalReceived;
+            tBal += originalRowData.balance;
+
+            // Only add to installment/aging totals if balance outstanding > 0
+            if (originalRowData.balance > 0) {
+              tMonthlyInst += originalRowData.monthlyInst;
+              t0_30 += originalRowData.b0;
+              t31_60 += originalRowData.b31;
+              t61_90 += originalRowData.b61;
+              t91_plus += originalRowData.b91;
+            }
+          }
+        }
+      }
+
+      let totalTr = tbody.querySelector('.footer-total');
+      if (totalTr) {
+        totalTr.innerHTML = `
+          <td colspan="7" style="text-align:right;">TOTAL:</td>
+          <td class="number">${tSales.toLocaleString()}</td>
+          <td class="number">${tRec.toLocaleString()}</td>
+          <td class="number">${tBal.toLocaleString()}</td>
+          <td></td>
+          <td class="number">${tMonthlyInst ? tMonthlyInst.toLocaleString() : ''}</td>
+          <td class="number">${t0_30 ? t0_30.toLocaleString() : ''}</td>
+          <td class="number">${t31_60 ? t31_60.toLocaleString() : ''}</td>
+          <td class="number">${t61_90 ? t61_90.toLocaleString() : ''}</td>
+          <td class="number">${t91_plus ? t91_plus.toLocaleString() : ''}</td>
+        `;
+      }
+    }
+
+    function populateDropdown(elementId, items) {
+      let select = document.getElementById(elementId);
+      select.innerHTML = '<option value="">All ' + (elementId.includes('Salesman') ? 'Salesmen' : 'Accounts') + '</option>';
+      if(elementId === 'filterSalesman') select.innerHTML = '<option value="">All Salesmen</option>';
+      if(elementId === 'filterSubSalesman') select.innerHTML = '<option value="">All Sub Salesmen</option>';
+      items.forEach(item => {
+        let opt = document.createElement('option');
+        opt.value = item;
+        opt.textContent = item;
+        select.appendChild(opt);
+      });
+    }
+
+    function populateAccountDropdowns(accounts) {
+      let fromSelect = document.getElementById('filterFromAccount');
+      let toSelect = document.getElementById('filterToAccount');
+      fromSelect.innerHTML = '<option value="">Start Account</option>';
+      toSelect.innerHTML = '<option value="">End Account</option>';
+      accounts.forEach(acc => {
+        let opt1 = document.createElement('option');
+        opt1.value = acc.accNo;
+        opt1.textContent = acc.accNo + " - " + acc.accTitle;
+        fromSelect.appendChild(opt1);
+        let opt2 = document.createElement('option');
+        opt2.value = acc.accNo;
+        opt2.textContent = acc.accNo + " - " + acc.accTitle;
+        toSelect.appendChild(opt2);
+      });
+    }
+
+    function applyFilters() {
+      setLoading(true);
+      setTimeout(() => {
+        let salesFilter = document.getElementById('filterSalesman').value;
+        let subSalesFilter = document.getElementById('filterSubSalesman').value;
+        let fromAcc = document.getElementById('filterFromAccount').value;
+        let toAcc = document.getElementById('filterToAccount').value;
+        let fromDateVal = document.getElementById('fromDate').value;
+        let toDateVal = document.getElementById('toDate').value;
+        let balOperator = document.getElementById('balanceOperator').value;
+        let balValue = parseFloat(document.getElementById('balanceValue').value) || 0;
+
+        let filtered = globalData.filter(row => {
+          let matchSales = !salesFilter || row.salesman === salesFilter;
+          let matchSubSales = !subSalesFilter || row.subSalesman === subSalesFilter;
+          let matchAccountRange = true;
+          let currentAccNum = String(row.accNo).trim();
+          if (fromAcc && currentAccNum < fromAcc) matchAccountRange = false;
+          if (toAcc && currentAccNum > toAcc) matchAccountRange = false;
+
+          let matchDate = true;
+          if (row.deliveryDate) {
+            let rowDate = row.deliveryDate;
+            if (fromDateVal && rowDate < fromDateVal) matchDate = false;
+            if (toDateVal && rowDate > toDateVal) matchDate = false;
+          } else if (fromDateVal || toDateVal) { matchDate = false; }
+
+          let matchBalance = true;
+          let rowBalance = parseFloat(row.balance) || 0;
+          if (balOperator === 'gt') matchBalance = rowBalance > balValue;
+          else if (balOperator === 'lt') matchBalance = rowBalance < balValue;
+          else if (balOperator === 'eq') matchBalance = rowBalance === balValue;
+          else if (balOperator === 'gt_zero') matchBalance = rowBalance > 0;
+
+          return matchSales && matchSubSales && matchAccountRange && matchDate && matchBalance;
+        });
+
+        renderTable(filtered);
+        setLoading(false);
+      }, 50);
+    }
+
+    function resetFilters() {
+      document.getElementById('filterSalesman').value = '';
+      document.getElementById('filterSubSalesman').value = '';
+      document.getElementById('filterFromAccount').value = '';
+      document.getElementById('filterToAccount').value = '';
+      document.getElementById('fromDate').value = '';
+      document.getElementById('toDate').value = '';
+      document.getElementById('balanceOperator').value = 'all';
+      document.getElementById('balanceValue').value = '';
+      renderTable(globalData);
+    }
+
+    function renderTable(data) {
+      let table = document.getElementById('reportTable');
+      let tbody = document.getElementById('tableBody');
+      tbody.innerHTML = '';
+      table.style.display = 'table';
+      
+      currentRenderedRows = [];
+
+      if(data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="16" style="text-align:center; padding: 20px;">No records match the selected filters.</td></tr>';
+        return;
+      }
+      
+      let tSales = 0, tRec = 0, tBal = 0, tMonthlyInst = 0, t0_30 = 0, t31_60 = 0, t61_90 = 0, t91_plus = 0;
+      
+      data.forEach(function(row) {
+        tSales += row.totalSales;
+        tRec += row.totalReceived;
+        tBal += row.balance;
+
+        let outstandingBal = parseFloat(row.balance) || 0;
+        let monthlyInst = parseFloat(row.monthlyInst) || 0;
+        let b0 = 0, b31 = 0, b61 = 0, b91 = 0;
+
+        if (outstandingBal > 0 && monthlyInst > 0 && row.deliveryDate) {
+          let dDate = new Date(row.deliveryDate);
+          let startYear = dDate.getFullYear();
+          let startMonth = dDate.getMonth() + 1;
+          
+          if (startMonth > 11) {
+            startMonth = 0;
+            startYear++;
+          }
+          let targetDate = new Date(startYear, startMonth, 1);
+          let todayObj = new Date();
+
+          let remainingBal = outstandingBal;
+          let m = 0;
+          while (remainingBal > 0) {
+            let instDueDate = new Date(targetDate.getFullYear(), targetDate.getMonth() + m, targetDate.getDate());
+            let diffTime = todayObj - instDueDate;
+            let diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+            let instAmt = Math.min(monthlyInst, remainingBal);
+
+            if (diffDays >= 0) {
+              if (diffDays <= 30) {
+                b0 += instAmt;
+              } else if (diffDays <= 60) {
+                b31 += instAmt;
+              } else if (diffDays <= 90) {
+                b61 += instAmt;
+              } else {
+                b91 += instAmt;
+              }
+            } else {
+              b0 += instAmt; 
+              remainingBal -= instAmt;
+              break;
+            }
+
+            remainingBal -= instAmt;
+            m++;
+            if (m > 60) break;
+          }
+        } else if (outstandingBal > 0) {
+          b0 = outstandingBal;
+        }
+
+        // Only add to installment/aging totals if balance outstanding > 0
+        if (outstandingBal > 0) {
+          tMonthlyInst += monthlyInst;
+          t0_30 += b0;
+          t31_60 += b31;
+          t61_90 += b61;
+          t91_plus += b91;
+        }
+
+        currentRenderedRows.push({
+          totalSales: row.totalSales,
+          totalReceived: row.totalReceived,
+          balance: row.balance,
+          monthlyInst: monthlyInst,
+          b0: b0,
+          b31: b31,
+          b61: b61,
+          b91: b91
+        });
+
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><span class="clickable-acc" onclick="openLedger('${row.accNo}')">${row.accNo}</span></td>
+          <td><b>${row.accTitle}</b></td>
+          <td>${row.salesman}</td>
+          <td>${row.subSalesman}</td>
+          <td>${row.mobile}</td>
+          <td class="ellipsis" title="${row.product}">${row.product}</td>
+          <td>${row.plan}</td>
+          <td class="number">${row.totalSales.toLocaleString()}</td>
+          <td class="number">${row.totalReceived.toLocaleString()}</td>
+          <td class="number" style="color: #d93025;"><b>${row.balance.toLocaleString()}</b></td>
+          <td>${row.deliveryDate ? row.deliveryDate.replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/, (m,d,mn,y)=>`${d.padStart(2,'0')}/${mn.padStart(2,'0')}/${y.slice(2)}`) : ''}</td>
+          <td class="number">${row.monthlyInst ? row.monthlyInst.toLocaleString() : ''}</td>
+          <td class="number">${b0 ? b0.toLocaleString() : ''}</td>
+          <td class="number">${b31 ? b31.toLocaleString() : ''}</td>
+          <td class="number">${b61 ? b61.toLocaleString() : ''}</td>
+          <td class="number">${b91 ? b91.toLocaleString() : ''}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      let totalTr = document.createElement('tr');
+      totalTr.className = 'footer-total';
+      totalTr.innerHTML = `
+        <td colspan="7" style="text-align:right;">TOTAL:</td>
+        <td class="number">${tSales.toLocaleString()}</td>
+        <td class="number">${tRec.toLocaleString()}</td>
+        <td class="number">${tBal.toLocaleString()}</td>
+        <td></td>
+        <td class="number">${tMonthlyInst ? tMonthlyInst.toLocaleString() : ''}</td>
+        <td class="number">${t0_30 ? t0_30.toLocaleString() : ''}</td>
+        <td class="number">${t31_60 ? t31_60.toLocaleString() : ''}</td>
+        <td class="number">${t61_90 ? t61_90.toLocaleString() : ''}</td>
+        <td class="number">${t91_plus ? t91_plus.toLocaleString() : ''}</td>
+      `;
+      tbody.appendChild(totalTr);
+    }
+
+    let ledgerTimeout;
+
+    function openLedger(accNo) {
+      let modal = document.getElementById('ledgerModal');
+      let content = document.getElementById('ledgerBodyContent');
+      
+      modal.style.display = 'block';
+      content.innerHTML = '<div style="text-align:center; padding:30px; font-weight:bold; color:#1a73e8;">Loading Customer Ledger...</div>';
+
+      if (ledgerTimeout) clearTimeout(ledgerTimeout);
+
+      ledgerTimeout = setTimeout(function() {
+        if (content.innerHTML.includes('Loading Customer Ledger')) {
+          content.innerHTML = '<div style="padding: 20px; color: red; text-align: center;"><strong>Request Timeout:</strong> Server took too long. Please close and try again.</div>';
+        }
+      }, 10000);
+
+      setTimeout(function() {
+        google.script.run
+          .withSuccessHandler(function(ledger) {
+            clearTimeout(ledgerTimeout);
+            if (!ledger) {
+              content.innerHTML = '<p style="color:red; text-align:center;">No data returned from server.</p>';
+              return;
+            }
+            if (ledger.error) {
+              content.innerHTML = '<div style="padding: 20px; color: red; text-align: center;"><strong>Script Error:</strong> ' + ledger.message + '</div>';
+              return;
+            }
+            renderLedgerHtml(ledger);
+          })
+          .withFailureHandler(function(err) {
+            clearTimeout(ledgerTimeout);
+            content.innerHTML = '<div style="padding: 20px; color: red; text-align: center;"><strong>Connection Error:</strong><br>' + (err.message || err) + '</div>';
+          })
+          .getCustomerLedger(accNo);
+      }, 50);
+    }
+
+    function closeLedgerModal() {
+      if (ledgerTimeout) clearTimeout(ledgerTimeout);
+      document.getElementById('ledgerModal').style.display = 'none';
+      document.getElementById('ledgerBodyContent').innerHTML = '';
+    }
+
+    function renderLedgerHtml(ledger) {
+      let info = ledger.info;
+      let sales = ledger.sales;
+      let receipts = ledger.receipts;
+
+      let totalSalesAmt = sales.reduce((sum, s) => sum + (parseFloat(s.total) || 0), 0);
+      let totalReceiptsAmt = receipts.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+      let balance = totalSalesAmt - totalReceiptsAmt;
+
+      let html = `
+        <div style="text-align: center; border-bottom: 2px solid #1a73e8; padding-bottom: 10px; margin-bottom: 15px;">
+          <h2 style="margin: 0; color: #1a73e8; font-size: 24px; font-weight: 800;">CUSTOMER LEDGER STATEMENT</h2>
+          <p style="margin: 4px 0; font-size: 14px; font-weight: 600; color: #555;">Detailed Account History</p>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; background: #f9f9f9; padding: 12px; border-radius: 5px; margin-bottom: 15px; font-size: 14px; font-weight: 600;">
+          <div>
+            <strong>Account No:</strong> <span style="font-size: 15px; color: #000;">${info.accNo}</span><br>
+            <strong>Account Title:</strong> <span style="font-size: 15px; color: #000;">${info.accTitle}</span><br>
+            <strong>Mobile No:</strong> <span style="font-size: 15px; color: #000;">${info.mobile}</span>
+          </div>
+          <div style="text-align: right;">
+            <strong>Salesman:</strong> <span style="font-size: 15px; color: #000;">${info.salesman || '-'}</span><br>
+            <strong>Sub Salesman:</strong> <span style="font-size: 15px; color: #000;">${info.subSalesman || '-'}</span><br>
+            <strong>Print Date:</strong> <span style="font-size: 15px; color: #000;">${new Date().toLocaleDateString()}</span>
+          </div>
+        </div>
+
+        <h4 style="margin: 10px 0 5px 0; color: #333; font-size: 17px; font-weight: 800; border-bottom: 1px solid #ddd; padding-bottom: 3px;">1. Sales Details</h4>
+        <table style="width: 100%; margin-bottom: 15px; font-size: 14px;">
+          <thead>
+            <tr style="background: #1a73e8; color: white; font-size: 14px;">
+              <th style="padding: 8px;">Date</th>
+              <th style="padding: 8px;">Product / Model</th>
+              <th class="number" style="padding: 8px;">Plan</th>
+              <th class="number" style="padding: 8px;">Monthly Inst</th>
+              <th class="number" style="padding: 8px;">Total Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      let totalMonthlyInstAmt = 0;
+      let totalSalesAmtCalc = 0;
+
+      if (sales.length === 0) {
+        html += `<tr><td colspan="5" style="text-align: center; font-weight: 600; padding: 10px;">No sales records found.</td></tr>`;
+      } else {
+        sales.forEach(s => {
+          let mInst = parseFloat(s.monthlyInst) || 0;
+          let sTot = parseFloat(s.total) || 0;
+          totalMonthlyInstAmt += mInst;
+          totalSalesAmtCalc += sTot;
+
+          html += `
+            <tr style="font-weight: 600;">
+              <td style="padding: 8px;">${s.date}</td>
+              <td style="padding: 8px;">${s.product}</td>
+              <td class="number" style="padding: 8px;">${s.plan}</td>
+              <td class="number" style="padding: 8px;">${mInst.toLocaleString()}</td>
+              <td class="number" style="padding: 8px;">${sTot.toLocaleString()}</td>
+            </tr>
+          `;
+        });
+
+        html += `
+            <tr style="background: #e8f0fe; font-weight: 800; border-top: 2px solid #bce0fd;">
+              <td colspan="3" style="padding: 8px; text-align: right;">Total:</td>
+              <td class="number" style="padding: 8px;">${totalMonthlyInstAmt.toLocaleString()}</td>
+              <td class="number" style="padding: 8px;">${totalSalesAmtCalc.toLocaleString()}</td>
+            </tr>
+        `;
+      }
+
+      html += `
+          </tbody>
+        </table>
+
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid #ddd; margin: 10px 0 5px 0; padding-bottom: 3px;">
+          <h4 style="margin: 0; color: #333; font-size: 17px; font-weight: 800;">2. Receipts History & Running Balance</h4>
+        </div>
+
+        <table style="width: 100%; margin-bottom: 15px; font-size: 14px;">
+          <thead>
+            <tr style="background: #34a853; color: white; font-size: 14px;">
+              <th style="padding: 8px; width: 50px;">S.No</th>
+              <th style="padding: 8px;">Receipt No</th>
+              <th style="padding: 8px;">Date</th>
+              <th class="number" style="padding: 8px;">Amount Received</th>
+              <th class="number" style="padding: 8px;">Running Balance</th>
+              <th style="padding: 8px;">Remarks</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      let validReceipts = receipts.filter(r => (parseFloat(r.amount) || 0) > 0);
+
+      let totalPaidAmt = 0;
+      if (validReceipts.length === 0) {
+        html += `<tr><td colspan="6" style="text-align: center; font-weight: 600; padding: 10px;">No payment records found.</td></tr>`;
+      } else {
+        let runningBal = totalSalesAmt;
+        validReceipts.forEach((r, idx) => {
+          let amt = parseFloat(r.amount) || 0;
+          totalPaidAmt += amt;
+          runningBal -= amt;
+          html += `
+            <tr style="font-weight: 600;">
+              <td style="padding: 8px; text-align: center;">${idx + 1}</td>
+              <td style="padding: 8px;">${r.receiptNo || ''}</td>
+              <td style="padding: 8px;">${r.date || ''}</td>
+              <td class="number" style="padding: 8px; color: #34a853;">${amt.toLocaleString()}</td>
+              <td class="number" style="padding: 8px; color: #d93025;">${runningBal.toLocaleString()}</td>
+              <td style="padding: 8px;">${r.remarks || ''}</td>
+            </tr>
+          `;
+        });
+      }
+
+      let finalRemainingBalance = totalSalesAmt - totalPaidAmt;
+
+      html += `
+          </tbody>
+        </table>
+
+        <div style="background: #f1f3f4; padding: 12px; border-radius: 5px; margin-top: 15px; font-size: 14px; font-weight: bold;">
+          <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+            <span>Total Amount:</span>
+            <span>${totalSalesAmt.toLocaleString()}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 4px 0; color: #34a853;">
+            <span>Total Paid Amount:</span>
+            <span>${totalPaidAmt.toLocaleString()}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; padding: 4px 0; border-top: 1px solid #ccc; margin-top: 4px; padding-top: 6px; color: #d93025; font-size: 15px;">
+            <span>Remaining Balance:</span>
+            <span>${finalRemainingBalance.toLocaleString()}</span>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('ledgerBodyContent').innerHTML = html;
+    }
+
+    function makeColumnsResizable() {
+      const table = document.getElementById("reportTable");
+      if (!table) return;
+
+      const headers = table.querySelectorAll("th");
+
+      headers.forEach((th, index) => {
+        if (th.querySelector(".resize-handle")) return;
+
+        const handle = document.createElement("div");
+        handle.className = "resize-handle";
+
+        handle.style.position = "absolute";
+        handle.style.top = "0";
+        handle.style.right = "0";
+        handle.style.width = "6px";
+        handle.style.height = "100%";
+        handle.style.cursor = "col-resize";
+        handle.style.userSelect = "none";
+
+        th.style.position = "relative";
+        th.appendChild(handle);
+
+        let startX, startWidth;
+
+        handle.addEventListener("mousedown", function (e) {
+          startX = e.pageX;
+          startWidth = th.offsetWidth;
+
+          function doDrag(e2) {
+            let newWidth = startWidth + (e2.pageX - startX);
+            if (newWidth < 25) newWidth = 25;
+
+            table.querySelectorAll("tr").forEach(row => {
+              if (row.cells[index]) {
+                row.cells[index].style.width = newWidth + "px";
+                row.cells[index].style.minWidth = newWidth + "px";
+              }
+            });
+          }
+
+          function stopDrag() {
+            localStorage.setItem("aging_col_" + index, th.offsetWidth);
+            document.removeEventListener("mousemove", doDrag);
+            document.removeEventListener("mouseup", stopDrag);
+          }
+
+          document.addEventListener("mousemove", doDrag);
+          document.addEventListener("mouseup", stopDrag);
+        });
+
+        let saved = localStorage.getItem("aging_col_" + index);
+        if (saved) {
+          table.querySelectorAll("tr").forEach(row => {
+            if (row.cells[index]) {
+              row.cells[index].style.width = saved + "px";
+            }
+          });
+        }
+      });
+    }
+  </script>
+</body>
+</html>

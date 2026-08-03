@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <style>
+    :root {
+      --primary: #1b5e20;
+      --primary-hover: #2e7d32;
+      --accent: #81c784;
+      --danger: #c62828;
+      --bg: #f4f6f8;
+      --surface: #ffffff;
+      --text: #333333;
+      --border: #cccccc;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 15px;
+      font-size: 14px;
+    }
+
+    .container {
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      max-width: 600px;
+      margin: auto;
+    }
+
+    h2 {
+      margin-top: 0;
+      color: var(--primary);
+      text-align: center;
+      font-size: 20px;
+      border-bottom: 2px solid var(--accent);
+      padding-bottom: 8px;
+    }
+
+    .tab-container {
+      display: flex;
+      margin-bottom: 15px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      cursor: pointer;
+      font-weight: bold;
+      color: #666;
+      background: #e0e0e0;
+      border-top-left-radius: 4px;
+      border-top-right-radius: 4px;
+      transition: 0.3s;
+    }
+
+    .tab.active {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .form-section { display: none; }
+    .form-section.active { display: block; }
+
+    .form-group { margin-bottom: 12px; }
+
+    label {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 600;
+      color: #444;
+      font-size: 13px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+
+    input:focus {
+      border-color: var(--primary);
+      outline: none;
+    }
+
+    input[readonly] { background-color: #eaeded; color: #555; }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .action-btn {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 13px;
+      color: #fff;
+    }
+
+    .btn-primary { background-color: var(--primary); }
+    .btn-primary:hover { background-color: var(--primary-hover); }
+    .btn-danger { background-color: var(--danger); }
+    .btn-danger:hover { background-color: #b71c1c; }
+    .btn-secondary { background-color: #546e7a; }
+
+    .loader {
+      display: none;
+      text-align: center;
+      color: var(--primary);
+      font-weight: bold;
+      margin: 10px 0;
+    }
+
+    .info-box {
+      background: #e8f5e9;
+      border-left: 4px solid var(--primary);
+      padding: 10px;
+      margin-bottom: 15px;
+      font-size: 13px;
+    }
+
+    .search-box-card {
+      background: #f9f9f9;
+      border: 1px solid #e0e0e0;
+      padding: 12px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+
+    table.edit-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 12px;
+    }
+
+    table.edit-table th, table.edit-table td {
+      border: 1px solid #ddd;
+      padding: 6px;
+      text-align: center;
+    }
+
+    table.edit-table th {
+      background-color: #f1f8e9;
+      color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Al Meezan ERP Receipts</h2>
+  
+  <div class="tab-container">
+    <div id="tabNew" class="tab active" onclick="switchTab('new')">New Receipt</div>
+    <div id="tabEdit" class="tab" onclick="switchTab('edit')">Edit / Delete</div>
+  </div>
+
+  <div id="loader" class="loader">Processing, please wait...</div>
+
+  <!-- SECTION 1: NEW RECEIPT -->
+  <div id="sectionNew" class="form-section active">
+    <div class="form-group">
+      <label for="accountNo">Account No / Code</label>
+      <input type="text" id="accountNo" placeholder="Enter Account Number..." onkeydown="handleAccountKey(event)">
+    </div>
+
+    <div class="form-group">
+      <label for="accountTitle">Account Title (Customer Name)</label>
+      <input type="text" id="accountTitle" readonly placeholder="Auto fetched...">
+    </div>
+
+    <div style="display: flex; gap: 10px;">
+      <div class="form-group" style="flex: 1;">
+        <label for="salesman">Salesman</label>
+        <input type="text" id="salesman" readonly placeholder="...">
+      </div>
+      <div class="form-group" style="flex: 1;">
+        <label for="installment">Installment</label>
+        <input type="text" id="installment" readonly placeholder="...">
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 10px;">
+      <div class="form-group" style="flex: 1;">
+        <label for="totalSale">Total Sale</label>
+        <input type="text" id="totalSale" readonly placeholder="...">
+      </div>
+      <div class="form-group" style="flex: 1;">
+        <label for="balance">Current Balance</label>
+        <input type="text" id="balance" readonly style="font-weight: bold; color: #b71c1c;" placeholder="...">
+      </div>
+    </div>
+
+    <hr style="border: 0; border-top: 1px solid #ddd; margin: 15px 0;">
+
+    <div style="display: flex; gap: 10px;">
+      <div class="form-group" style="flex: 1;">
+        <label for="receiptNoCustom">Receipt No / Code</label>
+        <input type="text" id="receiptNoCustom" placeholder="e.g. 68301">
+      </div>
+      <div class="form-group" style="flex: 1;">
+        <label for="receiptDate">Receipt Date</label>
+        <input type="date" id="receiptDate">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="receiptAmount">Receipt Amount (PKR)</label>
+      <input type="number" id="receiptAmount" placeholder="Enter amount received...">
+    </div>
+
+    <div class="btn-row">
+      <button class="action-btn btn-primary" style="flex:1;" onclick="submitNewReceipt()">Save Receipt</button>
+      <button class="action-btn btn-secondary" style="flex:1;" onclick="clearForm()">Reset</button>
+    </div>
+  </div>
+
+  <!-- SECTION 2: EDIT / DELETE -->
+  <div id="sectionEdit" class="form-section">
+    <div class="info-box">
+      Aap Receipt No ya Account No se alag alag search kar sakte hain. Account No se search karne par us account ki tamam recovery entries show ho jayengi jahan aap account number ya amount update ya delete kar sakte hain.
+    </div>
+
+    <!-- Separate Search Box 1: By Receipt No -->
+    <div class="search-box-card">
+      <div class="form-group" style="margin-bottom: 0;">
+        <label for="searchEditRctNo">Search by Receipt No</label>
+        <div style="display: flex; gap: 8px; margin-top: 5px;">
+          <input type="text" id="searchEditRctNo" placeholder="Enter Receipt No..." onkeydown="if(event.key === 'Enter'){ searchByReceipt(); }">
+          <button class="action-btn btn-primary" style="flex: 0 0 90px;" onclick="searchByReceipt()">Search</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Separate Search Box 2: By Account No -->
+    <div class="search-box-card">
+      <div class="form-group" style="margin-bottom: 0;">
+        <label for="searchEditAccNo">Search by Account No (Recovery History)</label>
+        <div style="display: flex; gap: 8px; margin-top: 5px;">
+          <input type="text" id="searchEditAccNo" placeholder="Enter Account No (e.g. 7865024)..." onkeydown="if(event.key === 'Enter'){ searchByAccount(); }">
+          <button class="action-btn btn-primary" style="flex: 0 0 90px;" onclick="searchByAccount()">Search</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="searchResultsContainer" style="margin-top: 15px; overflow-x: auto;">
+      <!-- Dynamic table will load here -->
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let customerCache = null;
+  google.script.run
+    .withSuccessHandler(function(data){
+      customerCache = data;
+    })
+    .getAllCustomersCache();
+
+  window.onload = function() {
+    let today = new Date().toISOString().split('T')[0];
+    document.getElementById('receiptDate').value = today;
+  };
+
+  function switchTab(tabName) {
+    document.getElementById('tabNew').classList.remove('active');
+    document.getElementById('tabEdit').classList.remove('active');
+    document.getElementById('sectionNew').classList.remove('active');
+    document.getElementById('sectionEdit').classList.remove('active');
+
+    if (tabName === 'new') {
+      document.getElementById('tabNew').classList.add('active');
+      document.getElementById('sectionNew').classList.add('active');
+    } else {
+      document.getElementById('tabEdit').classList.add('active');
+      document.getElementById('sectionEdit').classList.add('active');
+    }
+  }
+
+  function showLoader(show) {
+    document.getElementById('loader').style.display = show ? 'block' : 'none';
+  }
+
+  function handleAccountKey(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      fetchCustomerDetails();
+    }
+  }
+
+  function fetchCustomerDetails() {
+    let accNo = document.getElementById("accountNo").value.trim();
+    if (!accNo) return;
+
+    // 1. Check local cache first if available
+    if (typeof customerCache !== 'undefined' && customerCache && customerCache[accNo]) {
+      let res = customerCache[accNo];
+      document.getElementById("accountTitle").value = res.accountTitle || "";
+      document.getElementById("salesman").value = res.salesman || "";
+      document.getElementById("installment").value = res.installment || "";
+      document.getElementById("totalSale").value = res.totalSale || "";
+      document.getElementById("balance").value = res.balance || "";
+      let receiptCustom = document.getElementById("receiptNoCustom");
+      if (receiptCustom) receiptCustom.focus();
+      return;
+    }
+
+    // 2. If not in cache, fetch directly from Google Apps Script Backend
+    showLoader(true);
+    google.script.run
+      .withSuccessHandler(function(res) {
+        showLoader(false);
+        if (res && res.success) {
+          document.getElementById("accountTitle").value = res.accountTitle || "";
+          document.getElementById("salesman").value = res.salesman || "";
+          document.getElementById("installment").value = res.installment || "";
+          document.getElementById("totalSale").value = res.totalSale || "";
+          document.getElementById("balance").value = res.balance || "";
+          
+          let receiptCustom = document.getElementById("receiptNoCustom");
+          if (receiptCustom) receiptCustom.focus();
+        } else {
+          alert(res ? res.error : "Customer not found.");
+          document.getElementById("accountTitle").value = "";
+          document.getElementById("salesman").value = "";
+          document.getElementById("installment").value = "";
+          document.getElementById("totalSale").value = "";
+          document.getElementById("balance").value = "";
+        }
+      })
+      .withFailureHandler(function(err) {
+        showLoader(false);
+        alert("Error: " + err.message);
+      })
+      .getCustomerDetailsForReceipt(accNo);
+  }
+
+  function submitNewReceipt() {
+    let data = {
+      accountNo: document.getElementById('accountNo').value.trim(),
+      receiptNoCustom: document.getElementById('receiptNoCustom').value.trim(),
+      receiptDate: document.getElementById('receiptDate').value,
+      receiptAmount: document.getElementById('receiptAmount').value
+    };
+
+    if (!data.accountNo || !data.receiptNoCustom || !data.receiptAmount) {
+      alert("Please fill all required fields!");
+      return;
+    }
+
+    showLoader(true);
+    google.script.run
+      .withSuccessHandler(function(res) {
+        showLoader(false);
+        if (res.success) {
+          alert("Receipt Saved Successfully!\nBook No: " + res.bookNo + "\nNew Balance: " + res.newBalance);
+          clearForm();
+        } else {
+          alert("Error: " + res.error);
+        }
+      })
+      .saveReceipt(data);
+  }
+
+  function clearForm() {
+    document.getElementById('accountNo').value = '';
+    document.getElementById('accountTitle').value = '';
+    document.getElementById('salesman').value = '';
+    document.getElementById('installment').value = '';
+    document.getElementById('totalSale').value = '';
+    document.getElementById('balance').value = '';
+    document.getElementById('receiptNoCustom').value = '';
+    document.getElementById('receiptAmount').value = '';
+    let today = new Date().toISOString().split('T')[0];
+    document.getElementById('receiptDate').value = today;
+  }
+
+  // Search by Receipt No
+  function searchByReceipt() {
+    const rctNo = document.getElementById("searchEditRctNo").value.trim();
+    const container = document.getElementById("searchResultsContainer");
+
+    if (!rctNo) {
+      alert("Please enter Receipt No.");
+      return;
+    }
+
+    // Clear other search box
+    document.getElementById("searchEditAccNo").value = "";
+
+    showLoader(true);
+    container.innerHTML = "";
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        showLoader(false);
+        renderEditTable(res, container, 'receipt');
+      })
+      .withFailureHandler(function(err) {
+        showLoader(false);
+        container.innerHTML = "<div style='color:red; font-weight:bold; text-align:center;'>Script Error: " + (err.message || err) + "</div>";
+      })
+      .searchReceiptForEdit(rctNo);
+  }
+
+  // Search by Account No (Recovery History)
+  function searchByAccount() {
+    const accNo = document.getElementById("searchEditAccNo").value.trim();
+    const container = document.getElementById("searchResultsContainer");
+
+    if (!accNo) {
+      alert("Please enter Account No.");
+      return;
+    }
+
+    // Clear other search box
+    document.getElementById("searchEditRctNo").value = "";
+
+    showLoader(true);
+    container.innerHTML = "";
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        showLoader(false);
+        renderEditTable(res, container, 'account');
+      })
+      .withFailureHandler(function(err) {
+        showLoader(false);
+        container.innerHTML = "<div style='color:red; font-weight:bold; text-align:center;'>Script Error: " + (err.message || err) + "</div>";
+      })
+      .searchAccountForEdit(accNo);
+  }
+
+  function renderEditTable(res, container, searchType) {
+    if (!res) {
+      container.innerHTML = "<div style='color:red; font-weight:bold; text-align:center;'>Empty response from server.</div>";
+      return;
+    }
+
+    if (!res.success) {
+      container.innerHTML = "<div style='color:red; font-weight:bold; text-align:center;'>" + (res.error || "Unknown Error") + "</div>";
+      return;
+    }
+
+    let html = `
+      <table class="edit-table">
+      <thead>
+      <tr>
+        <th>Receipt No</th>
+        <th>Account No</th>
+        <th>Customer</th>
+        <th>Amount (PKR)</th>
+        <th>Action</th>
+      </tr>
+      </thead>
+      <tbody>`;
+
+    let totalAmount = 0;
+
+    res.entries.forEach(function(r) {
+      totalAmount += Number(r.amount) || 0;
+      html += `
+      <tr>
+        <td>${r.receiptNo || '-'}</td>
+        <td>
+          <input type="text" class="edit-acc-input" data-row="${r.rowIndex}" value="${r.accountNo}" style="width:100px; text-align:center;">
+        </td>
+        <td>${r.accountTitle || ''}</td>
+        <td>
+          <input type="number" class="edit-amt-input" data-row="${r.rowIndex}" value="${r.amount}" style="width:90px; text-align:center;">
+        </td>
+        <td>
+          <button class="action-btn btn-danger" onclick="deleteRow(${r.rowIndex})">Delete</button>
+        </td>
+      </tr>`;
+    });
+
+    html += `</tbody></table>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+        <div style="font-weight: bold; font-size: 14px; color: var(--primary);">
+          Total Amount: <span>${totalAmount}</span> PKR
+        </div>
+        <button class="action-btn btn-primary" style="padding: 10px 20px;" onclick="updateAllRows('${searchType}')">Update All Changes</button>
+      </div>`;
+
+    container.innerHTML = html;
+  }
+
+  function updateAllRows(searchType) {
+    const rows = document.querySelectorAll('.edit-amt-input');
+    if (rows.length === 0) return;
+
+    let updates = [];
+    rows.forEach(amtInput => {
+      const rowIndex = Number(amtInput.getAttribute('data-row'));
+      const accInput = document.querySelector(`.edit-acc-input[data-row="${rowIndex}"]`);
+      
+      updates.push({
+        rowIndex: rowIndex,
+        accountNo: accInput ? accInput.value.trim() : '',
+        amount: amtInput.value
+      });
+    });
+
+    showLoader(true);
+
+    let completed = 0;
+    let hasError = false;
+
+    updates.forEach(item => {
+      google.script.run
+        .withSuccessHandler(function(res) {
+          completed++;
+          if (!res.success) hasError = true;
+
+          if (completed === updates.length) {
+            showLoader(false);
+            if (hasError) {
+              alert("Kuch entries update hone mein masla hua hai.");
+            } else {
+              alert("All changes updated successfully!");
+              if (searchType === 'receipt') {
+                searchByReceipt();
+              } else {
+                searchByAccount();
+              }
+            }
+          }
+        })
+        .withFailureHandler(function(err) {
+          completed++;
+          hasError = true;
+          if (completed === updates.length) {
+            showLoader(false);
+            alert("Error updating rows.");
+          }
+        })
+        .updateReceiptEntry(item);
+    });
+  }
+
+  function deleteRow(rowIndex) {
+    if (confirm("Kya aap is entry ko delete karna chahte hain?")) {
+      showLoader(true);
+      google.script.run
+        .withSuccessHandler(function(res) {
+          showLoader(false);
+          if (res.success) {
+            alert(res.message);
+            if (document.getElementById("searchEditRctNo").value.trim()) {
+              searchByReceipt();
+            } else if (document.getElementById("searchEditAccNo").value.trim()) {
+              searchByAccount();
+            } else {
+              document.getElementById("searchResultsContainer").innerHTML = "";
+            }
+          } else {
+            alert("Error: " + res.error);
+          }
+        })
+        .deleteReceiptEntry({ rowIndex: rowIndex });
+    }
+  }
+</script>
+
+</body>
+</html>

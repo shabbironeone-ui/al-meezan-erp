@@ -1,0 +1,49 @@
+/*************************************************
+ * AL MEEZAN ERP PROFESSIONAL
+ * INVENTORY.GS
+ *************************************************/
+
+function updateStock(stock) {
+  const sheet = dbSheet("STOCK LEDGER");
+  const currentStock = getCurrentStock(stock.productId);
+  const balance = currentStock + Number(stock.qtyIn) - Number(stock.qtyOut);
+
+  sheet.appendRow([
+    getNextStockTransactionId(),
+    stock.date,
+    stock.productId,
+    stock.category,
+    stock.brand,
+    stock.model,
+    stock.qtyIn,
+    stock.qtyOut,
+    balance,
+    stock.unitCost,
+    balance * stock.unitCost,
+    stock.referenceType,
+    stock.referenceId,
+    stock.warehouse,
+    new Date()
+  ]);
+  return true;
+}
+
+function getCurrentStock(productId) {
+  const data = dbData("STOCK LEDGER");
+  let balance = 0;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][2]) === String(productId)) {
+      balance = Number(data[i][8]);
+    }
+  }
+  return balance;
+}
+
+function getNextStockTransactionId() {
+  const sheet = dbSheet("STOCK LEDGER");
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return "ST000001";
+  const lastId = sheet.getRange(lastRow, 1).getValue();
+  const next = parseInt(String(lastId).replace("ST", ""), 10) + 1;
+  return "ST" + ("000000" + next).slice(-6);
+}

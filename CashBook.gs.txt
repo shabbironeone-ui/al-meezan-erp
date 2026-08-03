@@ -1,0 +1,312 @@
+/*************************************************
+ * AL MEEZAN ERP PROFESSIONAL
+ * CASHBOOK.GS - STEP 3
+ **************************************************/
+
+function getCashBookSheet() {
+  return SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Cash_BOOK") || SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Cash Book");
+}
+
+function getBankBookSheet() {
+  return SpreadsheetApp.getActiveSpreadsheet().getSheetByName("BANK_BOOK") || SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Bank Book");
+}
+
+function getContraSheet() {
+  return SpreadsheetApp.getActiveSpreadsheet().getSheetByName("CONTRA");
+}
+
+function getDailyClosingSheet() {
+  return SpreadsheetApp.getActiveSpreadsheet().getSheetByName("DAILY_CLOSING");
+}
+/*************************************************
+ * CASHBOOK.GS - STEP 4 (CONTRA & CLOSING)
+ **************************************************/
+
+function saveContraVoucher(data) {
+  try {
+    const sheet = getContraSheet();
+    const lastRow = sheet.getLastRow();
+    
+    // Generate Contra No e.g., CON-00001
+    let nextNum = 1;
+    if (lastRow > 1) {
+      let lastContraNo = sheet.getRange(lastRow, 2).getValue();
+      let numPart = parseInt(String(lastContraNo).replace("CON-", ""), 10);
+      if (!isNaN(numPart)) nextNum = numPart + 1;
+    }
+    let contraNo = "CON-" + ("00000" + nextNum).slice(-5);
+
+    let rowData = [
+      data.date || new Date(),
+      contraNo,
+      data.type, // Cash to Bank / Bank to Cash
+      Number(data.amount) || 0,
+      data.description || "",
+      data.enteredBy || "Admin"
+    ];
+
+    sheet.appendRow(rowData);
+    return { success: true, contraNo: contraNo };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+
+function saveDailyClosing(data) {
+  try {
+    const sheet = getDailyClosingSheet();
+    
+    let rowData = [
+      data.date || new Date(),
+      Number(data.openingCash) || 0,
+      Number(data.totalCashIn) || 0,
+      Number(data.totalCashOut) || 0,
+      Number(data.closingCash) || 0,
+      Number(data.physicalCash) || 0,
+      Number(data.difference) || 0,
+      data.status || "Closed"
+    ];
+
+    sheet.appendRow(rowData);
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+/*************************************************
+ * CASHBOOK.GS - FINAL ACCURATE SUMMARY FETCH
+ **************************************************/
+
+function getDailySummaryData(dateStr) {
+  try {
+    let totalIn = 0;
+    let totalOut = 0;
+    
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // 1. RECEIPTS Sheet se Cash In calculate karein (Date in Col C [index 2], Amount in Col H [index 7])
+    const receiptSheet = ss.getSheetByName("RECEIPTS");
+    if (receiptSheet && receiptSheet.getLastRow() > 1) {
+      let rData = receiptSheet.getDataRange().getValues();
+      for (let i = 1; i < rData.length; i++) {
+        let rowDate = rData[i][2]; // Column C (Date)
+        let amount = Number(rData[i][7]) || 0; // Column H (Receipt Amount)
+        
+        if (rowDate) {
+          let d = new Date(rowDate);
+          if (!isNaN(d.getTime())) {
+            let formattedRowDate = d.toISOString().split('T')[0];
+            if (formattedRowDate === dateStr) {
+              totalIn += amount;
+            }
+          }
+        }
+      }
+    }
+
+    // 2. CASH_BOOK se Cash In aur Cash Out calculate karein (Date in Col A [0], Cash In in Col G [6], Cash Out in Col H [7])
+    const cashSheet = getCashBookSheet();
+    if (cashSheet && cashSheet.getLastRow() > 1) {
+      let cashData = cashSheet.getDataRange().getValues();
+      for (let i = 1; i < cashData.length; i++) {
+        let rowDate = cashData[i][0]; // Column A (Date)
+        if (rowDate) {
+          let d = new Date(rowDate);
+          if (!isNaN(d.getTime())) {
+            let formattedRowDate = d.toISOString().split('T')[0];
+            if (formattedRowDate === dateStr) {
+              totalIn += Number(cashData[i][6]) || 0;  // Cash In (Debit) - Column G
+              totalOut += Number(cashData[i][7]) || 0; // Cash Out (Credit) - Column H
+            }
+          }
+        }
+      }
+    }
+
+    // 3. Get previous day's closing cash as opening cash
+    let openingCash = 0;
+    const closingSheet = getDailyClosingSheet();
+    if (closingSheet && closingSheet.getLastRow() > 1) {
+      let closingData = closingSheet.getDataRange().getValues();
+      let lastRow = closingData[closingData.length - 1];
+      openingCash = Number(lastRow[4]) || 0; // Closing Cash column index 4
+    }
+
+    return {
+      success: true,
+      openingCash: openingCash,
+      totalCashIn: totalIn,
+      totalCashOut: totalOut
+    };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+/*************************************************
+ * CASHBOOK.GS - CLEAN SYNC (DATE, RECEIPT NO, AMOUNT ONLY)
+ **************************************************/
+
+function syncReceiptsToCashBook() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const receiptSheet = ss.getSheetByName("RECEIPTS");
+    const cashSheet = getCashBookSheet();
+    
+    if (!receiptSheet || !cashSheet) {
+      return { success: false, error: "RECEIPTS or CASH_BOOK sheet not found!" };
+    }
+
+    let rData = receiptSheet.getDataRange().getValues();
+    
+    // Step 1: Group and sum amounts by Date and Receipt No
+    // Key format: "YYYY-MM-DD_ReceiptNo" (agar receipt no khali ho toh date hi key hogi)
+    let groupedData = {};
+
+    for (let i = 1; i < rData.length; i++) {
+      let row = rData[i];
+      let receiptNo = row[1] ? String(row[1]).trim() : ""; // Column B (Receipt No)
+      let rawDate = row[2];                               // Column C (Date)
+      let amount = Number(row[7]) || 0;                   // Column H (Amount)
+
+      if (rawDate && amount > 0) {
+        let d = new Date(rawDate);
+        if (!isNaN(d.getTime())) {
+          let dateStr = d.toISOString().split('T')[0];
+          
+          // Unique key for grouping: agar receipt no hai toh date+receipt, warna sirf date (khali receipt ke liye)
+          let groupKey = dateStr + "_" + receiptNo;
+
+          if (!groupedData[groupKey]) {
+            groupedData[groupKey] = {
+              dateObj: d,
+              dateStr: dateStr,
+              receiptNo: receiptNo,
+              totalAmount: 0
+            };
+          }
+          groupedData[groupKey].totalAmount += amount;
+        }
+      }
+    }
+
+    // Step Check: Pehle se CASH_BOOK mein mojood entries check karein taake duplicate na hon
+    let cashData = cashSheet.getDataRange().getValues();
+    let existingEntries = new Set();
+    for (let c = 1; c < cashData.length; c++) {
+      let cDate = cashData[c][0] ? new Date(cashData[c][0]).toISOString().split('T')[0] : "";
+      let cVno = cashData[c][1] ? String(cashData[c][1]).trim() : "";
+      existingEntries.add(cDate + "_" + cVno);
+    }
+
+    let newEntriesCount = 0;
+
+    // Step 2: Grouped data ko CASH_BOOK mein append karein
+    for (let key in groupedData) {
+      let item = groupedData[key];
+      
+      // Check if this date + receipt combo already exists in Cash Book
+      if (!existingEntries.has(key)) {
+        let rowData = [
+          item.dateObj,           // Date (Col A)
+          item.receiptNo,         // Voucher No / Receipt No (Col B)
+          "",                     // Account No (Col C - Blank)
+          "",                     // Account Title (Col D - Blank)
+          "Synced from Receipts", // Description (Col F)
+          item.totalAmount,       // Cash In (Debit) (Col G)
+          0,                      // Cash Out (Credit) (Col H)
+          "",                     // Balance (Col I)
+          "RECEIPTS"              // Ref Module (Col J)
+        ];
+        
+        cashSheet.appendRow(rowData);
+        existingEntries.add(key);
+        newEntriesCount++;
+      }
+    }
+
+    return { success: true, count: newEntriesCount };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
+/*************************************************
+ * CASHBOOK.GS - AUTO ROW EXTENSION & RANGE SUMMARY
+ **************************************************/
+
+// Helper function to check and add 1000 rows if sheet is full
+function ensureExtraRows(sheet) {
+  let lastRow = sheet.getLastRow();
+  let maxRows = sheet.getMaxRows();
+  if (maxRows - lastRow < 50) {
+    sheet.insertRowsAfter(maxRows, 1000);
+  }
+}
+
+// Updated Summary function for Date Range (From Date to To Date)
+function getRangeSummaryData(fromDateStr, toDateStr) {
+  try {
+    let totalIn = 0;
+    let totalOut = 0;
+    
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // 1. RECEIPTS Sheet se Date Range ka Cash In calculate karein
+    const receiptSheet = ss.getSheetByName("RECEIPTS");
+    if (receiptSheet && receiptSheet.getLastRow() > 1) {
+      let rData = receiptSheet.getDataRange().getValues();
+      for (let i = 1; i < rData.length; i++) {
+        let rowDate = rData[i][2]; // Column C (Date)
+        let amount = Number(rData[i][7]) || 0; // Column H (Amount)
+        
+        if (rowDate && amount > 0) {
+          let d = new Date(rowDate);
+          if (!isNaN(d.getTime())) {
+            let formattedRowDate = d.toISOString().split('T')[0];
+            if (formattedRowDate >= fromDateStr && formattedRowDate <= toDateStr) {
+              totalIn += amount;
+            }
+          }
+        }
+      }
+    }
+
+    // 2. CASH_BOOK se Date Range ka Cash In & Cash Out calculate karein
+    const cashSheet = getCashBookSheet();
+    ensureExtraRows(cashSheet); // Check and add rows if needed
+    
+    if (cashSheet && cashSheet.getLastRow() > 1) {
+      let cashData = cashSheet.getDataRange().getValues();
+      for (let i = 1; i < cashData.length; i++) {
+        let rowDate = cashData[i][0]; // Column A (Date)
+        if (rowDate) {
+          let d = new Date(rowDate);
+          if (!isNaN(d.getTime())) {
+            let formattedRowDate = d.toISOString().split('T')[0];
+            if (formattedRowDate >= fromDateStr && formattedRowDate <= toDateStr) {
+              totalIn += Number(cashData[i][6]) || 0;  // Cash In (Debit)
+              totalOut += Number(cashData[i][7]) || 0; // Cash Out (Credit)
+            }
+          }
+        }
+      }
+    }
+
+    // 3. Opening Cash (From Date se pehle ka closing balance)
+    let openingCash = 0;
+    const closingSheet = getDailyClosingSheet();
+    if (closingSheet && closingSheet.getLastRow() > 1) {
+      let closingData = closingSheet.getDataRange().getValues();
+      let lastRow = closingData[closingData.length - 1];
+      openingCash = Number(lastRow[4]) || 0; 
+    }
+
+    return {
+      success: true,
+      openingCash: openingCash,
+      totalCashIn: totalIn,
+      totalCashOut: totalOut
+    };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+}
