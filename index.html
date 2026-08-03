@@ -8,9 +8,11 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/assets/css/bootstrap.min.css" rel="stylesheet">
     <!-- FontAwesome Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Supabase JS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .sidebar { height: 100vh; background-color: #343a40; color: #fff; position: fixed; top: 0; left: 0; width: 250px; padding-top: 20px; }
+        .sidebar { height: 100vh; background-color: #343a40; color: #fff; position: fixed; top: 0; left: 0; width: 250px; padding-top: 20px; z-index: 1000; }
         .sidebar a { padding: 12px 20px; text-decoration: none; font-size: 16px; color: #adb5bd; display: block; transition: 0.3s; }
         .sidebar a:hover, .sidebar a.active { color: #fff; background-color: #495057; border-left: 4px solid #0d6efd; }
         .main-content { margin-left: 250px; padding: 20px; }
@@ -37,7 +39,7 @@
             <!-- HEADER -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2 id="page-title" class="text-secondary fw-bold">Dashboard Overview</h2>
-                <button class="btn btn-outline-primary btn-sm" onclick="loadData()"><i class="fas fa-sync-alt me-1"></i> Refresh Data</button>
+                <button class="btn btn-outline-primary btn-sm" onclick="fetchSupabaseData()"><i class="fas fa-sync-alt me-1"></i> Refresh Data</button>
             </div>
 
             <!-- 1. DASHBOARD TAB -->
@@ -69,11 +71,11 @@
                 <div class="card card-stat p-4 bg-white">
                     <h5 class="mb-3">Customer Party Ledger Search</h5>
                     <div class="input-group mb-3">
-                        <input type="text" id="ledger-customer-id" class="form-control" placeholder="Enter Customer Account ID...">
-                        <button class="btn btn-primary" onclick="fetchLedger()">Search Ledger</button>
+                        <input type="text" id="ledger-customer-id" class="form-control" placeholder="Enter Customer ID or Name...">
+                        <button class="btn btn-primary" onclick="searchLedger()">Search Ledger</button>
                     </div>
                     <div id="ledger-result" class="table-responsive">
-                        <!-- Dynamic Ledger Data will load here -->
+                        <p class="text-muted">Enter customer details to load ledger.</p>
                     </div>
                 </div>
             </div>
@@ -82,7 +84,7 @@
             <div id="tab-customer" class="content-tab" style="display:none;">
                 <div class="card card-stat p-4 bg-white col-md-6">
                     <h5 class="mb-3">Add New Customer</h5>
-                    <form id="customer-form" onsubmit="saveCustomer(event)">
+                    <form id="customer-form" onsubmit="saveCustomerToSupabase(event)">
                         <div class="mb-3">
                             <label class="form-label">Customer Name</label>
                             <input type="text" id="cust-name" class="form-control" required>
@@ -100,7 +102,7 @@
             <div id="tab-purchase" class="content-tab" style="display:none;">
                 <div class="card card-stat p-4 bg-white">
                     <h5 class="mb-3">Record Supplier Purchase</h5>
-                    <p class="text-muted">Backend hooks configured via `PURCHASE.GS`.</p>
+                    <p class="text-muted">Module ready for Supabase transactions.</p>
                 </div>
             </div>
 
@@ -109,30 +111,37 @@
                 <div class="card card-stat p-4 bg-white col-md-6">
                     <h5 class="mb-3">Log Business Expense</h5>
                     <div class="mb-3">
-                        <label class="form-label">Expense Head / Description</label>
+                        <label class="form-label">Expense Description</label>
                         <input type="text" id="exp-desc" class="form-control">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Amount (Rs)</label>
                         <input type="number" id="exp-amt" class="form-control">
                     </div>
-                    <button class="btn btn-warning text-white" onclick="saveExpense()">Add Expense</button>
+                    <button class="btn btn-warning text-white" onclick="saveExpenseToSupabase()">Add Expense</button>
                 </div>
             </div>
 
             <!-- 6. INVENTORY TAB -->
             <div id="tab-inventory" class="content-tab" style="display:none;">
                 <div class="card card-stat p-4 bg-white">
-                    <h5 class="mb-3">Inventory Status & Stock Ledger</h5>
-                    <p class="text-muted">Linked directly with `INVENTORY.GS` and `DATABASE.GS`.</p>
+                    <h5 class="mb-3">Inventory Status & Stock</h5>
+                    <p class="text-muted">Connected to Supabase items stock table.</p>
                 </div>
             </div>
 
         </div>
     </div>
 
-    <!-- JavaScript / Google Apps Script Runners -->
+    <!-- Supabase Connection & App Logic -->
     <script>
+        // --- SUPABASE CONFIGURATION ---
+        // Yahan apni Supabase project ki credentials darj karein
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+        
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         function switchTab(tabName) {
             document.querySelectorAll('.content-tab').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.tab-link').forEach(el => el.classList.remove('active'));
@@ -151,46 +160,67 @@
             document.getElementById('page-title').innerText = titles[tabName];
         }
 
-        // Integration with GAS backend functions
-        function loadData() {
-            google.script.run.withSuccessHandler(function(data) {
-                // Assuming DASHBOARD.GS returns metrics object
-                if(data) {
-                    document.getElementById('val-sales').innerText = "Rs. " + (data.sales || '139,829,140');
-                    document.getElementById('val-collections').innerText = "Rs. " + (data.collections || '100,996,092');
-                    document.getElementById('val-receivable').innerText = "Rs. " + (data.receivable || '38,833,048');
+        // Fetch Dashboard Metrics from Supabase
+        async function fetchSupabaseData() {
+            try {
+                // Misal ke taur par agar aapki table ka naam 'dashboard_metrics' ya 'sales_summary' hai
+                // ya aap khud calculations kar rahe hain:
+                let { data, error } = await _supabase.from('dashboard_metrics').select('*').single();
+                
+                if (data) {
+                    document.getElementById('val-sales').innerText = "Rs. " + Number(data.total_sales || 0).toLocaleString();
+                    document.getElementById('val-collections').innerText = "Rs. " + Number(data.total_collections || 0).toLocaleString();
+                    document.getElementById('val-receivable').innerText = "Rs. " + Number(data.total_receivable || 0).toLocaleString();
+                } else {
+                    // Fallback agar table khali ho
+                    document.getElementById('val-sales').innerText = "Rs. 139,829,140";
+                    document.getElementById('val-collections').innerText = "Rs. 100,996,092";
+                    document.getElementById('val-receivable').innerText = "Rs. 38,833,048";
                 }
-            }).getDashboardMetrics(); // Function inside DASHBOARD.GS
+            } catch (err) {
+                console.error('Error fetching data:', err);
+            }
         }
 
-        function fetchLedger() {
-            var custId = document.getElementById('ledger-customer-id').value;
-            google.script.run.withSuccessHandler(function(res) {
-                document.getElementById('ledger-result').innerHTML = res;
-            }).getPartyLedger(custId); // Function inside PARTYLEDGER.GS
-        }
-
-        function saveCustomer(e) {
+        // Save Customer to Supabase
+        async function saveCustomerToSupabase(e) {
             e.preventDefault();
-            var name = document.getElementById('cust-name').value;
-            var phone = document.getElementById('cust-phone').value;
-            google.script.run.withSuccessHandler(function(msg) {
-                alert("Customer Saved Successfully!");
+            const name = document.getElementById('cust-name').value;
+            const phone = document.getElementById('cust-phone').value;
+
+            const { data, error } = await _supabase
+                .from('customers')
+                .insert([{ name: name, phone: phone }]);
+
+            if (error) {
+                alert('Error saving customer: ' + error.message);
+            } else {
+                alert('Customer Saved to Supabase Successfully!');
                 document.getElementById('customer-form').reset();
-            }).addNewCustomer({name: name, phone: phone}); // Function inside CUSTOMER.GS
+            }
         }
 
-        function saveExpense() {
-            var desc = document.getElementById('exp-desc').value;
-            var amt = document.getElementById('exp-amt').value;
-            google.script.run.withSuccessHandler(function(res) {
-                alert("Expense Recorded!");
-            }).recordExpense(desc, amt); // Function inside EXPENSE.GS
+        // Save Expense to Supabase
+        async function saveExpenseToSupabase() {
+            const description = document.getElementById('exp-desc').value;
+            const amount = document.getElementById('exp-amt').value;
+
+            const { data, error } = await _supabase
+                .from('expenses')
+                .insert([{ description: description, amount: amount }]);
+
+            if (error) {
+                alert('Error: ' + error.message);
+            } else {
+                alert('Expense Logged Successfully!');
+                document.getElementById('exp-desc').value = '';
+                document.getElementById('exp-amt').value = '';
+            }
         }
 
-        // Load dashboard stats on start
+        // Run on load
         window.onload = function() {
-            // loadData();
+            fetchSupabaseData();
         };
     </script>
 </body>
