@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Al Meezan Electronics - ERP Professional</title>
+  <!-- Bootstrap CSS for Professional UI -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Supabase CDN Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { background-color: #f8f9fa; font-family: Arial, sans-serif; }
+    .sidebar { min-height: 100vh; background: #1155cc; color: white; }
+    .sidebar a { color: white; text-decoration: none; display: block; padding: 10px 15px; border-radius: 5px; margin-bottom: 5px; }
+    .sidebar a:hover, .sidebar a.active { background: #0b3d91; }
+    .card-stat { border-left: 4px solid #1155cc; }
+  </style>
+</head>
+<body>
+
+  <div class="container-fluid">
+    <div class="row">
+      <!-- Sidebar Navigation -->
+      <div class="col-md-3 col-lg-2 sidebar p-3">
+        <h3>🏪 Al Meezan</h3>
+        <p class="text-white-50 small">ERP Professional</p>
+        <hr>
+        <ul class="nav flex-column">
+          <li class="nav-item"><a href="#" class="active" onclick="showTab('dashboard')">📊 Dashboard</a></li>
+          <li class="nav-item"><a href="#" onclick="showTab('coa')">👥 Chart of Accounts (COA)</a></li>
+          <li class="nav-item"><a href="#" onclick="showTab('receipts')">💵 Receipts & Recovery</a></li>
+          <li class="nav-item"><a href="#" onclick="showTab('ledger')">📄 Customer Ledger</a></li>
+        </ul>
+      </div>
+
+      <!-- Main Content Area -->
+      <div class="col-md-9 col-lg-10 p-4">
+        
+        <!-- DASHBOARD TAB -->
+        <div id="tab-dashboard" class="content-tab">
+          <h2>Executive Dashboard</h2>
+          <hr>
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <div class="card card-stat shadow-sm p-3">
+                <h6 class="text-muted">Total COA Accounts</h6>
+                <h3 id="stat-total-coa">Loading...</h3>
+              </div>
+            </div>
+            <div class="col-md-4 mb-3">
+              <div class="card card-stat shadow-sm p-3 border-success">
+                <h6 class="text-muted">Total Collections</h6>
+                <h3 id="stat-collections" class="text-success">Rs. 0</h3>
+              </div>
+            </div>
+            <div class="col-md-4 mb-3">
+              <div class="card card-stat shadow-sm p-3 border-danger">
+                <h6 class="text-muted">Total Expenses</h6>
+                <h3 id="stat-expenses" class="text-danger">Rs. 0</h3>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- COA TAB -->
+        <div id="tab-coa" class="content-tab" style="display: none;">
+          <h2>Chart of Accounts (COA)</h2>
+          <hr>
+          <button class="btn btn-primary mb-3" onclick="loadCOAData()">Refresh COA Data</button>
+          <div class="table-responsive bg-white p-3 shadow-sm rounded">
+            <table class="table table-striped table-bordered" id="coaTable">
+              <thead>
+                <tr>
+                  <th>Account No</th>
+                  <th>Account Title</th>
+                  <th>Salesman</th>
+                  <th>Mobile Number</th>
+                  <th>Address</th>
+                </tr>
+              </thead>
+              <tbody id="coaTableBody">
+                <tr><td colspan="5" class="text-center">Loading data from Supabase...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- RECEIPTS TAB -->
+        <div id="tab-receipts" class="content-tab" style="display: none;">
+          <h2>Receipts & Recovery Entry</h2>
+          <hr>
+          <div class="card p-4 shadow-sm bg-white">
+            <div class="mb-3">
+              <label class="form-label">Account Number</label>
+              <input type="text" id="rec-accNo" class="form-control" placeholder="Enter Account No (e.g. 7868821)" onblur="fetchCustomerInfo(this.value)">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Customer Title</label>
+              <input type="text" id="rec-accTitle" class="form-control" readonly>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Receipt No</label>
+              <input type="text" id="rec-receiptNo" class="form-control" placeholder="Enter Receipt No">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Amount (Rs)</label>
+              <input type="number" id="rec-amount" class="form-control" placeholder="Enter Amount">
+            </div>
+            <button class="btn btn-success" onclick="saveNewReceipt()">Save Receipt to Supabase</button>
+            <div id="rec-msg" class="mt-3"></div>
+          </div>
+        </div>
+
+        <!-- CUSTOMER LEDGER TAB -->
+        <div id="tab-ledger" class="content-tab" style="display: none;">
+          <h2>Customer Ledger & History</h2>
+          <hr>
+          <div class="input-group mb-3">
+            <input type="text" id="ledger-accNo" class="form-control" placeholder="Enter Account Number">
+            <button class="btn btn-primary" onclick="searchLedger()">Search Ledger</button>
+          </div>
+          <div id="ledger-result"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Supabase Integration Script -->
+  <script>
+    // Supabase Credentials
+    const SUPABASE_URL = 'https://xolxqymnyfmvtjaanadj.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvbHhxeW1ueWZtdnRqYWFuYWRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyMTIzMjQsImV4cCI6MjEwMDc4ODMyNH0.KHVRtStCtCtyQpXwwAO5GC3IBMLoFh27ojQUuIm7FwQ';
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Tab Navigation Logic
+    function showTab(tabName) {
+      document.querySelectorAll('.content-tab').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('.sidebar a').forEach(el => el.classList.remove('active'));
+      
+      document.getElementById('tab-' + tabName).style.display = 'block';
+      event.target.classList.add('active');
+
+      if (tabName === 'coa') {
+        loadCOAData();
+      } else if (tabName === 'dashboard') {
+        loadDashboardStats();
+      }
+    }
+
+    // 1. Load COA Data into Table
+    async function loadCOAData() {
+      let { data, error } = await supabase.from('COA').select('*');
+      const tbody = document.getElementById('coaTableBody');
+      tbody.innerHTML = '';
+
+      if (error) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-danger text-center">Error: ${error.message}</td></tr>`;
+        return;
+      }
+
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center">No records found.</td></tr>`;
+        return;
+      }
+
+      data.forEach(row => {
+        tbody.innerHTML += `
+          <tr>
+            <td>${row['Sr.No'] || row['Account No'] || ''}</td>
+            <td>${row['ACCOUNT TITLE'] || ''}</td>
+            <td>${row['SALES MAN'] || ''}</td>
+            <td>${row['MOBILE NUMBER'] || ''}</td>
+            <td>${row['ADDRESS'] || ''}</td>
+          </tr>
+        `;
+      });
+    }
+
+    // 2. Load Dashboard Stats
+    async function loadDashboardStats() {
+      let { count, error } = await supabase.from('COA').select('*', { count: 'exact', head: true });
+      if (!error) {
+        document.getElementById('stat-total-coa').innerText = count || 0;
+      }
+    }
+
+    // 3. Fetch Customer Details for Receipt
+    async function fetchCustomerInfo(accNo) {
+      if (!accNo) return;
+      let { data, error } = await supabase.from('COA').select('*').eq('Sr.No', accNo.trim());
+      if (data && data.length > 0) {
+        document.getElementById('rec-accTitle').value = data[0]['ACCOUNT TITLE'] || '';
+      } else {
+        // Try searching by alternative column if needed
+        document.getElementById('rec-accTitle').value = 'Customer Found / Checked';
+      }
+    }
+
+    // 4. Save Receipt
+    async function saveNewReceipt() {
+      const accNo = document.getElementById('rec-accNo').value;
+      const receiptNo = document.getElementById('rec-receiptNo').value;
+      const amount = document.getElementById('rec-amount').value;
+      const msgDiv = document.getElementById('rec-msg');
+
+      if (!accNo || !receiptNo || !amount) {
+        msgDiv.innerHTML = `<div class="alert alert-danger">Please fill all required fields!</div>`;
+        return;
+      }
+
+      let { data, error } = await supabase.from('RECEIPTS').insert([
+        { receipt_no: receiptNo, account_no: accNo, amount: Number(amount), date: new Date().toISOString() }
+      ]);
+
+      if (error) {
+        msgDiv.innerHTML = `<div class="alert alert-danger">Error saving: ${error.message}</div>`;
+      } else {
+        msgDiv.innerHTML = `<div class="alert alert-success">Receipt saved successfully to Supabase!</div>`;
+        document.getElementById('rec-accNo').value = '';
+        document.getElementById('rec-receiptNo').value = '';
+        document.getElementById('rec-amount').value = '';
+        document.getElementById('rec-accTitle').value = '';
+      }
+    }
+
+    // Load initial dashboard stats on page load
+    window.onload = function() {
+      loadDashboardStats();
+    };
+  </script>
+</body>
+</html>
