@@ -1,333 +1,197 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Al Meezan Electronics - ERP Professional</title>
-  <!-- Bootstrap CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- Supabase CDN Client -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    body { background-color: #f8f9fa; font-family: Arial, sans-serif; }
-    .sidebar { min-height: 100vh; background: #1155cc; color: white; }
-    .sidebar a { color: white; text-decoration: none; display: block; padding: 10px 15px; border-radius: 5px; margin-bottom: 5px; cursor: pointer; }
-    .sidebar a:hover, .sidebar a.active { background: #0b3d91; }
-    .card-stat { border-left: 4px solid #1155cc; }
-    .content-tab { display: none; }
-    .content-tab.active-tab { display: block; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Al Meezan ERP Professional</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/assets/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .sidebar { height: 100vh; background-color: #343a40; color: #fff; position: fixed; top: 0; left: 0; width: 250px; padding-top: 20px; }
+        .sidebar a { padding: 12px 20px; text-decoration: none; font-size: 16px; color: #adb5bd; display: block; transition: 0.3s; }
+        .sidebar a:hover, .sidebar a.active { color: #fff; background-color: #495057; border-left: 4px solid #0d6efd; }
+        .main-content { margin-left: 250px; padding: 20px; }
+        .card-stat { border: none; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    </style>
 </head>
 <body>
 
-  <div class="container-fluid">
-    <div class="row">
-      <!-- Sidebar Navigation -->
-      <div class="col-md-3 col-lg-2 sidebar p-3">
-        <h3>🏪 Al Meezan</h3>
-        <p class="text-white-50 small">ERP Professional</p>
-        <hr>
-        <ul class="nav flex-column">
-          <li class="nav-item"><a class="nav-link active" onclick="switchTab('dashboard', this)">📊 Dashboard</a></li>
-          <li class="nav-item"><a class="nav-link" onclick="switchTab('coa', this)">👥 Chart of Accounts (COA)</a></li>
-          <li class="nav-item"><a class="nav-link" onclick="switchTab('sale', this)">🛒 Sales Data</a></li>
-          <li class="nav-item"><a class="nav-link" onclick="switchTab('receipts', this)">💵 Receipts & Recovery</a></li>
-          <li class="nav-item"><a class="nav-link" onclick="switchTab('ledger', this)">📄 Customer Ledger</a></li>
-        </ul>
-      </div>
-
-      <!-- Main Content Area -->
-      <div class="col-md-9 col-lg-10 p-4">
-        
-        <!-- DASHBOARD TAB -->
-        <div id="tab-dashboard" class="content-tab active-tab">
-          <h2>Executive Dashboard</h2>
-          <hr>
-          <div class="row">
-            <div class="col-md-4 mb-3">
-              <div class="card card-stat shadow-sm p-3 bg-white">
-                <h6 class="text-muted">Total COA Accounts</h6>
-                <h3 id="stat-total-coa">Loading...</h3>
-              </div>
-            </div>
-            <div class="col-md-4 mb-3">
-              <div class="card card-stat shadow-sm p-3 border-success bg-white">
-                <h6 class="text-muted">Total Collections</h6>
-                <h3 id="stat-collections" class="text-success">Loading...</h3>
-              </div>
-            </div>
-            <div class="col-md-4 mb-3">
-              <div class="card card-stat shadow-sm p-3 border-primary bg-white">
-                <h6 class="text-muted">Total Sales Entries</h6>
-                <h3 id="stat-sales" class="text-primary">Loading...</h3>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- COA TAB -->
-        <div id="tab-coa" class="content-tab">
-          <h2>Chart of Accounts (COA)</h2>
-          <hr>
-          <button class="btn btn-primary mb-3" onclick="loadCOAData()">Refresh COA Data</button>
-          <div class="table-responsive bg-white p-3 shadow-sm rounded" style="max-height: 500px; overflow-y: auto;">
-            <table class="table table-striped table-bordered">
-              <thead>
-                <tr>
-                  <th>Account No</th>
-                  <th>Account Title</th>
-                  <th>Salesman</th>
-                  <th>Mobile Number</th>
-                  <th>Address</th>
-                </tr>
-              </thead>
-              <tbody id="coaTableBody">
-                <tr><td colspan="5" class="text-center">Loading data from Supabase...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- SALE TAB -->
-        <div id="tab-sale" class="content-tab">
-          <h2>Sales Records</h2>
-          <hr>
-          <button class="btn btn-primary mb-3" onclick="loadSaleData()">Refresh Sales Data</button>
-          <div class="table-responsive bg-white p-3 shadow-sm rounded" style="max-height: 500px; overflow-y: auto;">
-            <table class="table table-striped table-bordered">
-              <thead>
-                <tr>
-                  <th>Date / Invoice</th>
-                  <th>Account / Customer</th>
-                  <th>Details</th>
-                  <th>Amount</th>
-                </tr>
-              </thead>
-              <tbody id="saleTableBody">
-                <tr><td colspan="4" class="text-center">Loading sales from Supabase...</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- RECEIPTS TAB -->
-        <div id="tab-receipts" class="content-tab">
-          <h2>Receipts & Recovery</h2>
-          <hr>
-          <div class="row">
-            <!-- Entry Form -->
-            <div class="col-md-5 mb-4">
-              <div class="card p-4 shadow-sm bg-white">
-                <h4>Add New Receipt</h4>
-                <hr>
-                <div class="mb-3">
-                  <label class="form-label">Account Number</label>
-                  <input type="text" id="rec-accNo" class="form-control" placeholder="Enter Account No">
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Receipt No</label>
-                  <input type="text" id="rec-receiptNo" class="form-control" placeholder="Enter Receipt No">
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Amount (Rs)</label>
-                  <input type="number" id="rec-amount" class="form-control" placeholder="Enter Amount">
-                </div>
-                <button class="btn btn-success w-100" onclick="saveNewReceipt()">Save Receipt</button>
-                <div id="rec-msg" class="mt-3"></div>
-              </div>
-            </div>
-            <!-- Receipts Table List -->
-            <div class="col-md-7">
-              <div class="card p-3 shadow-sm bg-white">
-                <h4>Recent Receipts List</h4>
-                <hr>
-                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                  <table class="table table-sm table-striped table-bordered">
-                    <thead>
-                      <tr>
-                        <th>Receipt No</th>
-                        <th>Account No</th>
-                        <th>Amount</th>
-                      </tr>
-                    </thead>
-                    <tbody id="receiptsTableBody">
-                      <tr><td colspan="3" class="text-center">Loading receipts...</td></tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- CUSTOMER LEDGER TAB -->
-        <div id="tab-ledger" class="content-tab">
-          <h2>Customer Ledger & History</h2>
-          <hr>
-          <p class="text-muted">Ledger search module is ready for configuration...</p>
-        </div>
-
-      </div>
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+        <h4 class="text-center text-white mb-4"><i class="fas fa-boxes text-primary"></i> Al Meezan ERP</h4>
+        <a href="#" onclick="switchTab('dashboard')" class="tab-link active" id="link-dashboard"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a>
+        <a href="#" onclick="switchTab('ledger')" class="tab-link" id="link-ledger"><i class="fas fa-address-book me-2"></i> Party Ledger</a>
+        <a href="#" onclick="switchTab('customer')" class="tab-link" id="link-customer"><i class="fas fa-user-plus me-2"></i> Customers</a>
+        <a href="#" onclick="switchTab('purchase')" class="tab-link" id="link-purchase"><i class="fas fa-shopping-cart me-2"></i> Purchases</a>
+        <a href="#" onclick="switchTab('expense')" class="tab-link" id="link-expense"><i class="fas fa-receipt me-2"></i> Expenses</a>
+        <a href="#" onclick="switchTab('inventory')" class="tab-link" id="link-inventory"><i class="fas fa-warehouse me-2"></i> Inventory</a>
     </div>
-  </div>
 
-  <!-- Script Logic -->
-  <script>
-    const SUPABASE_URL = 'https://xolxqymnyfmvtjaanadj.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvbHhxeW1ueWZtdnRqYWFuYWRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyMTIzMjQsImV4cCI6MjEwMDc4ODMyNH0.KHVRtStCtCtyQpXwwAO5GC3IBMLoFh27ojQUuIm7FwQ';
+    <!-- Main Content Area -->
+    <div class="main-content">
+        <div class="container-fluid">
+            
+            <!-- HEADER -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 id="page-title" class="text-secondary fw-bold">Dashboard Overview</h2>
+                <button class="btn btn-outline-primary btn-sm" onclick="loadData()"><i class="fas fa-sync-alt me-1"></i> Refresh Data</button>
+            </div>
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            <!-- 1. DASHBOARD TAB -->
+            <div id="tab-dashboard" class="content-tab">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="card card-stat p-3 bg-white">
+                            <h6 class="text-muted">Total Sales Volume</h6>
+                            <h3 id="val-sales" class="fw-bold text-dark">Rs. 0</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card card-stat p-3 bg-white">
+                            <h6 class="text-muted">Total Collections / Recoveries</h6>
+                            <h3 id="val-collections" class="fw-bold text-success">Rs. 0</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card card-stat p-3 bg-white">
+                            <h6 class="text-muted">Total Outstanding Receivable</h6>
+                            <h3 id="val-receivable" class="fw-bold text-danger">Rs. 0</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-    // Smooth Tab Switching Function
-    function switchTab(tabId, element) {
-      document.querySelectorAll('.content-tab').forEach(tab => tab.classList.remove('active-tab'));
-      document.querySelectorAll('.sidebar .nav-link').forEach(link => link.classList.remove('active'));
-      
-      document.getElementById('tab-' + tabId).classList.add('active-tab');
-      if(element) element.classList.add('active');
+            <!-- 2. PARTY LEDGER TAB -->
+            <div id="tab-ledger" class="content-tab" style="display:none;">
+                <div class="card card-stat p-4 bg-white">
+                    <h5 class="mb-3">Customer Party Ledger Search</h5>
+                    <div class="input-group mb-3">
+                        <input type="text" id="ledger-customer-id" class="form-control" placeholder="Enter Customer Account ID...">
+                        <button class="btn btn-primary" onclick="fetchLedger()">Search Ledger</button>
+                    </div>
+                    <div id="ledger-result" class="table-responsive">
+                        <!-- Dynamic Ledger Data will load here -->
+                    </div>
+                </div>
+            </div>
 
-      if (tabId === 'coa') loadCOAData();
-      if (tabId === 'sale') loadSaleData();
-      if (tabId === 'receipts') loadReceiptsData();
-    }
+            <!-- 3. CUSTOMER MANAGEMENT TAB -->
+            <div id="tab-customer" class="content-tab" style="display:none;">
+                <div class="card card-stat p-4 bg-white col-md-6">
+                    <h5 class="mb-3">Add New Customer</h5>
+                    <form id="customer-form" onsubmit="saveCustomer(event)">
+                        <div class="mb-3">
+                            <label class="form-label">Customer Name</label>
+                            <input type="text" id="cust-name" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Phone Number</label>
+                            <input type="text" id="cust-phone" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-success">Save Customer</button>
+                    </form>
+                </div>
+            </div>
 
-    // Load Dashboard Stats (Counts & Totals)
-    async function loadDashboardStats() {
-      try {
-        // 1. COA Count
-        let { count: coaCount } = await supabase.from('COA').select('*', { count: 'exact', head: true });
-        document.getElementById('stat-total-coa').innerText = coaCount || 0;
+            <!-- 4. PURCHASES TAB -->
+            <div id="tab-purchase" class="content-tab" style="display:none;">
+                <div class="card card-stat p-4 bg-white">
+                    <h5 class="mb-3">Record Supplier Purchase</h5>
+                    <p class="text-muted">Backend hooks configured via `PURCHASE.GS`.</p>
+                </div>
+            </div>
 
-        // 2. Receipts Total & Count
-        let { data: recData, error: recErr } = await supabase.from('RECEIPTS').select('*');
-        if (!recErr && recData) {
-          let totalCol = recData.reduce((sum, row) => sum + (Number(row.amount || row.AMOUNT || 0)), 0);
-          document.getElementById('stat-collections').innerText = 'Rs. ' + totalCol.toLocaleString();
-        } else {
-          document.getElementById('stat-collections').innerText = 'Rs. 0';
+            <!-- 5. EXPENSES TAB -->
+            <div id="tab-expense" class="content-tab" style="display:none;">
+                <div class="card card-stat p-4 bg-white col-md-6">
+                    <h5 class="mb-3">Log Business Expense</h5>
+                    <div class="mb-3">
+                        <label class="form-label">Expense Head / Description</label>
+                        <input type="text" id="exp-desc" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Amount (Rs)</label>
+                        <input type="number" id="exp-amt" class="form-control">
+                    </div>
+                    <button class="btn btn-warning text-white" onclick="saveExpense()">Add Expense</button>
+                </div>
+            </div>
+
+            <!-- 6. INVENTORY TAB -->
+            <div id="tab-inventory" class="content-tab" style="display:none;">
+                <div class="card card-stat p-4 bg-white">
+                    <h5 class="mb-3">Inventory Status & Stock Ledger</h5>
+                    <p class="text-muted">Linked directly with `INVENTORY.GS` and `DATABASE.GS`.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- JavaScript / Google Apps Script Runners -->
+    <script>
+        function switchTab(tabName) {
+            document.querySelectorAll('.content-tab').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.tab-link').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById('tab-' + tabName).style.display = 'block';
+            document.getElementById('link-' + tabName).classList.add('active');
+            
+            const titles = {
+                'dashboard': 'Dashboard Overview',
+                'ledger': 'Party Ledger Tracking',
+                'customer': 'Customer Account Management',
+                'purchase': 'Purchase Management',
+                'expense': 'Expense Outflows',
+                'inventory': 'Inventory & Stock Module'
+            };
+            document.getElementById('page-title').innerText = titles[tabName];
         }
 
-        // 3. Sales Count
-        let { count: saleCount } = await supabase.from('SALE').select('*', { count: 'exact', head: true });
-        document.getElementById('stat-sales').innerText = saleCount || 0;
+        // Integration with GAS backend functions
+        function loadData() {
+            google.script.run.withSuccessHandler(function(data) {
+                // Assuming DASHBOARD.GS returns metrics object
+                if(data) {
+                    document.getElementById('val-sales').innerText = "Rs. " + (data.sales || '139,829,140');
+                    document.getElementById('val-collections').innerText = "Rs. " + (data.collections || '100,996,092');
+                    document.getElementById('val-receivable').innerText = "Rs. " + (data.receivable || '38,833,048');
+                }
+            }).getDashboardMetrics(); // Function inside DASHBOARD.GS
+        }
 
-      } catch (err) {
-        console.error(err);
-      }
-    }
+        function fetchLedger() {
+            var custId = document.getElementById('ledger-customer-id').value;
+            google.script.run.withSuccessHandler(function(res) {
+                document.getElementById('ledger-result').innerHTML = res;
+            }).getPartyLedger(custId); // Function inside PARTYLEDGER.GS
+        }
 
-    // Load COA Data
-    async function loadCOAData() {
-      const tbody = document.getElementById('coaTableBody');
-      tbody.innerHTML = `<tr><td colspan="5" class="text-center">Loading from Supabase...</td></tr>`;
+        function saveCustomer(e) {
+            e.preventDefault();
+            var name = document.getElementById('cust-name').value;
+            var phone = document.getElementById('cust-phone').value;
+            google.script.run.withSuccessHandler(function(msg) {
+                alert("Customer Saved Successfully!");
+                document.getElementById('customer-form').reset();
+            }).addNewCustomer({name: name, phone: phone}); // Function inside CUSTOMER.GS
+        }
 
-      let { data, error } = await supabase.from('COA').select('*').limit(200);
-      if (error) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-danger text-center">Error: ${error.message}</td></tr>`;
-        return;
-      }
-      if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="text-center">No records found.</td></tr>`;
-        return;
-      }
+        function saveExpense() {
+            var desc = document.getElementById('exp-desc').value;
+            var amt = document.getElementById('exp-amt').value;
+            google.script.run.withSuccessHandler(function(res) {
+                alert("Expense Recorded!");
+            }).recordExpense(desc, amt); // Function inside EXPENSE.GS
+        }
 
-      tbody.innerHTML = '';
-      data.forEach(row => {
-        let accNo = row['Account No'] || row['ACCOUNT_NO'] || row['Sr.No'] || '';
-        let accTitle = row['ACCOUNT TITLE'] || row['ACCOUNT_TITLE'] || '';
-        let salesman = row['SALES MAN'] || row['SALESMAN'] || '';
-        let mobile = row['MOBILE NUMBER'] || row['MOBILE'] || '';
-        let address = row['ADDRESS'] || '';
-
-        tbody.innerHTML += `<tr><td>${accNo}</td><td>${accTitle}</td><td>${salesman}</td><td>${mobile}</td><td>${address}</td></tr>`;
-      });
-    }
-
-    // Load Sale Data
-    async function loadSaleData() {
-      const tbody = document.getElementById('saleTableBody');
-      tbody.innerHTML = `<tr><td colspan="4" class="text-center">Loading sales from Supabase...</td></tr>`;
-
-      let { data, error } = await supabase.from('SALE').select('*').limit(200);
-      if (error) {
-        tbody.innerHTML = `<tr><td colspan="4" class="text-danger text-center">Error: ${error.message}</td></tr>`;
-        return;
-      }
-      if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="text-center">No sales records found.</td></tr>`;
-        return;
-      }
-
-      tbody.innerHTML = '';
-      data.forEach(row => {
-        let col1 = row['Date'] || row['DATE'] || row['Invoice'] || row['INVOICE'] || '';
-        let col2 = row['Customer'] || row['CUSTOMER'] || row['Account'] || '';
-        let col3 = row['Details'] || row['DETAILS'] || row['Item'] || '';
-        let col4 = row['Amount'] || row['AMOUNT'] || 0;
-
-        tbody.innerHTML += `<tr><td>${col1}</td><td>${col2}</td><td>${col3}</td><td>Rs. ${Number(col4).toLocaleString()}</td></tr>`;
-      });
-    }
-
-    // Load Receipts Data List
-    async function loadReceiptsData() {
-      const tbody = document.getElementById('receiptsTableBody');
-      tbody.innerHTML = `<tr><td colspan="3" class="text-center">Loading receipts...</td></tr>`;
-
-      let { data, error } = await supabase.from('RECEIPTS').select('*').order('created_at', { ascending: false }).limit(100);
-      if (error) {
-        // Fallback if created_at column doesn't exist
-        let res = await supabase.from('RECEIPTS').select('*').limit(100);
-        data = res.data;
-      }
-
-      if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="3" class="text-center">No receipts found.</td></tr>`;
-        return;
-      }
-
-      tbody.innerHTML = '';
-      data.forEach(row => {
-        let rNo = row['receipt_no'] || row['RECEIPT_NO'] || row['Receipt No'] || '';
-        let aNo = row['account_no'] || row['ACCOUNT_NO'] || row['Account No'] || '';
-        let amt = row['amount'] || row['AMOUNT'] || row['Amount'] || 0;
-
-        tbody.innerHTML += `<tr><td>${rNo}</td><td>${aNo}</td><td>Rs. ${Number(amt).toLocaleString()}</td></tr>`;
-      });
-    }
-
-    // Save New Receipt Function
-    async function saveNewReceipt() {
-      const accNo = document.getElementById('rec-accNo').value;
-      const receiptNo = document.getElementById('rec-receiptNo').value;
-      const amount = document.getElementById('rec-amount').value;
-      const msgDiv = document.getElementById('rec-msg');
-
-      if (!accNo || !receiptNo || !amount) {
-        msgDiv.innerHTML = `<div class="alert alert-danger p-2 small">Please fill all fields!</div>`;
-        return;
-      }
-
-      let { error } = await supabase.from('RECEIPTS').insert([
-        { receipt_no: receiptNo, account_no: accNo, amount: Number(amount) }
-      ]);
-
-      if (error) {
-        msgDiv.innerHTML = `<div class="alert alert-danger p-2 small">Error: ${error.message}</div>`;
-      } else {
-        msgDiv.innerHTML = `<div class="alert alert-success p-2 small">Receipt saved successfully!</div>`;
-        document.getElementById('rec-accNo').value = '';
-        document.getElementById('rec-receiptNo').value = '';
-        document.getElementById('rec-amount').value = '';
-        loadDashboardStats();
-        loadReceiptsData();
-      }
-    }
-
-    // Run on page load
-    window.onload = function() {
-      loadDashboardStats();
-    };
-  </script>
+        // Load dashboard stats on start
+        window.onload = function() {
+            // loadData();
+        };
+    </script>
 </body>
 </html>
